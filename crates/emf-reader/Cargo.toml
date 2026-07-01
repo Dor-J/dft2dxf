@@ -1,0 +1,23 @@
+[package]
+name = "emf-reader"
+description = "Parse Enhanced Metafile records and replay graphics state into Drawing IR"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+drawing-ir = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+dft2dxf-testkit = { workspace = true }
+dft-reader = { workspace = true }
+drawing-dxf = { workspace = true }
+drawing-svg = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true
