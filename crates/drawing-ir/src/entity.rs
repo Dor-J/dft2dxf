@@ -6,6 +6,7 @@ use crate::diagnostic::SourceProvenance;
 use crate::geometry::{ArcSegment, Path, Point, Polyline};
 use crate::style::Style;
 
+#[allow(clippy::trivially_copy_pass_by_ref)] // serde `skip_serializing_if` requires `fn(&T) -> bool`
 fn is_zero(value: &f64) -> bool {
   *value == 0.0
 }

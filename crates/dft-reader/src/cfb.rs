@@ -15,21 +15,6 @@ impl<'a> ByteCursor<'a> {
     Self { data, offset: 0 }
   }
 
-  /// Returns remaining bytes.
-  pub(crate) fn remaining(&self) -> &'a [u8] {
-    &self.data[self.offset..]
-  }
-
-  /// Returns current offset.
-  pub(crate) fn offset(&self) -> usize {
-    self.offset
-  }
-
-  /// Returns whether the cursor is exhausted.
-  pub(crate) fn is_empty(&self) -> bool {
-    self.offset >= self.data.len()
-  }
-
   /// Reads exactly `len` bytes.
   pub(crate) fn read_bytes(&mut self, len: usize, context: &str) -> DftResult<&'a [u8]> {
     let end = self

@@ -109,7 +109,7 @@ if let Some(cam) = &drawing.cam {
 use dft_reader::{DftDocument, DftOpenOptions, Limits};
 
 let options = DftOpenOptions::new().with_limits(Limits::strict());
-let mut document = DftDocument::open_with_options("drawing.dft", options)?;
+let mut document = DftDocument::open_with_options("drawing.dft", &options)?;
 let sheets = document.sheets()?;
 let emf = document.extract_emf(1)?;
 emf.write_to("sheet-1.emf")?;

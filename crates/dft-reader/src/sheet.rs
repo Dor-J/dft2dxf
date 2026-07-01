@@ -44,6 +44,10 @@ impl ExtractedEmf {
   }
 
   /// Writes EMF bytes to `path`.
+  ///
+  /// # Errors
+  ///
+  /// Returns [`DftError::Io`] if the parent directory or output file cannot be created or written.
   pub fn write_to(&self, path: &Path) -> DftResult<()> {
     if let Some(parent) = path.parent() {
       if !parent.as_os_str().is_empty() {

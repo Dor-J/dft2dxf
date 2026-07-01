@@ -111,12 +111,13 @@ pub struct ArcSegment {
 
 impl ArcSegment {
   /// Samples points along the arc for bounds calculation.
+  #[must_use]
   pub fn sample_points(&self, segments: usize) -> Vec<Point> {
     let mut points = Vec::with_capacity(segments + 2);
     points.push(self.point_at_angle(self.start_angle));
-    let steps = segments.max(4);
+    let steps = u32::try_from(segments.max(4)).unwrap_or(u32::MAX);
     for step in 1..steps {
-      let t = step as f64 / steps as f64;
+      let t = f64::from(step) / f64::from(steps);
       let angle = self.start_angle + (self.end_angle - self.start_angle) * t;
       points.push(self.point_at_angle(angle));
     }

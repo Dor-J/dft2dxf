@@ -12,8 +12,8 @@ fn bounding_box_include_point_and_validity() {
   bounds.include_point(Point::new(1.0, 2.0));
   bounds.include_point(Point::new(-1.0, 5.0));
   assert!(bounds.is_valid());
-  assert_eq!(bounds.min_x, -1.0);
-  assert_eq!(bounds.max_y, 5.0);
+  assert!((bounds.min_x - (-1.0)).abs() < f64::EPSILON);
+  assert!((bounds.max_y - 5.0).abs() < f64::EPSILON);
 }
 
 #[test]
@@ -31,6 +31,7 @@ fn arc_segment_samples_endpoints() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn sheet_recompute_bounds_all_entity_kinds() {
   let mut sheet = Sheet {
     index: Some(1),
@@ -152,12 +153,15 @@ fn drawing_metadata_is_empty_and_serde() {
   let empty = DrawingMetadata::default();
   assert!(empty.is_empty());
 
-  let mut meta = DrawingMetadata::default();
-  meta.part_name = Some("PART".to_string());
+  let meta = DrawingMetadata {
+    part_name: Some("PART".to_string()),
+    ..Default::default()
+  };
   assert!(!meta.is_empty());
 
   let json = serde_json::to_string(&meta).unwrap();
   assert!(json.contains("PART"));
+  let mut meta = meta;
   meta.units = PaperUnit::Inches;
   assert_eq!(meta.units, PaperUnit::Inches);
 }

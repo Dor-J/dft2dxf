@@ -58,7 +58,7 @@ pub(crate) fn read_stream_limited<R: Read + Seek>(
     })?;
   let size = stream
     .seek(SeekFrom::End(0))
-    .map_err(DftError::CompoundFile)? as u64;
+    .map_err(DftError::CompoundFile)?;
   if size > limits.max_stream_size {
     return Err(DftError::limit(
       "max_stream_size",
@@ -69,7 +69,9 @@ pub(crate) fn read_stream_limited<R: Read + Seek>(
   stream
     .seek(SeekFrom::Start(0))
     .map_err(DftError::CompoundFile)?;
-  let mut data = vec![0u8; size as usize];
+  let size_usize = usize::try_from(size)
+    .map_err(|_| DftError::limit("max_stream_size", limits.max_stream_size, size))?;
+  let mut data = vec![0u8; size_usize];
   stream
     .read_exact(&mut data)
     .map_err(DftError::CompoundFile)?;
@@ -115,18 +117,19 @@ fn walk_storage<R: Read + Seek>(
     if *entry_count > limits.max_entry_count {
       return Err(DftError::limit(
         "max_entry_count",
-        limits.max_entry_count as u64,
-        *entry_count as u64,
+        u64::from(limits.max_entry_count),
+        u64::from(*entry_count),
       ));
     }
 
     let entry_path = entry.path().to_string_lossy().replace('\\', "/");
-    let entry_depth = entry_path.chars().filter(|ch| *ch == '/').count() as u32;
+    let entry_depth =
+      u32::try_from(entry_path.chars().filter(|ch| *ch == '/').count()).unwrap_or(u32::MAX);
     if entry_depth > limits.max_storage_depth {
       return Err(DftError::limit(
         "max_storage_depth",
-        limits.max_storage_depth as u64,
-        entry_depth as u64,
+        u64::from(limits.max_storage_depth),
+        u64::from(entry_depth),
       ));
     }
 
@@ -174,12 +177,15 @@ pub(crate) fn parse_draft_metadata(data: &[u8], limits: &Limits) -> DftResult<Pa
       message: format!("negative sheet count {number_of_sheets}"),
     });
   }
-  let sheet_count = number_of_sheets as u32;
+  let sheet_count = u32::try_from(number_of_sheets).map_err(|_| DftError::InvalidMetadata {
+    context: "JDraftDocumentInfo.number_of_sheets".to_string(),
+    message: format!("sheet count out of range {number_of_sheets}"),
+  })?;
   if sheet_count > limits.max_sheet_count {
     return Err(DftError::limit(
       "max_sheet_count",
-      limits.max_sheet_count as u64,
-      sheet_count as u64,
+      u64::from(limits.max_sheet_count),
+      u64::from(sheet_count),
     ));
   }
 
@@ -200,13 +206,16 @@ pub(crate) fn parse_draft_metadata(data: &[u8], limits: &Limits) -> DftResult<Pa
         message: format!("negative name length {name_units}"),
       });
     }
-    let byte_len =
-      (name_units as usize)
-        .checked_mul(2)
-        .ok_or_else(|| DftError::InvalidMetadata {
-          context: format!("sheet[{index}].name_length"),
-          message: "name length overflow".to_string(),
-        })?;
+    let byte_len = usize::try_from(name_units)
+      .map_err(|_| DftError::InvalidMetadata {
+        context: format!("sheet[{index}].name_length"),
+        message: format!("name length out of range {name_units}"),
+      })?
+      .checked_mul(2)
+      .ok_or_else(|| DftError::InvalidMetadata {
+        context: format!("sheet[{index}].name_length"),
+        message: "name length overflow".to_string(),
+      })?;
     let mut name = cursor.read_utf16_le(byte_len, &format!("sheet[{index}].name"))?;
     name = name.trim_end_matches('\0').to_string();
 
@@ -234,6 +243,11 @@ pub(crate) fn parse_draft_metadata(data: &[u8], limits: &Limits) -> DftResult<Pa
 }
 
 /// Parses raw `JDraftDocumentInfo` bytes into document and sheet metadata.
+///
+/// # Errors
+///
+/// Returns [`DftError::InvalidMetadata`] when the binary layout is invalid, or
+/// [`DftError::LimitExceeded`] when declared counts exceed configured limits.
 pub fn parse_viewer_document_info(
   data: &[u8],
   limits: &Limits,
@@ -252,7 +266,8 @@ pub(crate) fn extract_sheet_emf<R: Read + Seek>(
   let compressed = read_stream_limited(compound, &stream_path, limits)?;
   let decompressed = decompress_zlib(&compressed, &stream_path, limits)?;
 
-  if sheet.info.emf_size > 0 && decompressed.len() as u32 != sheet.info.emf_size {
+  if sheet.info.emf_size > 0 && u32::try_from(decompressed.len()).ok() != Some(sheet.info.emf_size)
+  {
     // Warn-level mismatch is tolerated in best-effort mode by caller; here we only
     // validate header and size cap.
   }

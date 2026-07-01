@@ -59,7 +59,7 @@ fn is_cnckad_text_dft(path: &Path) -> bool {
 
 fn assert_extracts_emf_from_dft(path: &Path) {
   let mut document =
-    DftDocument::open_with_options(path, DftOpenOptions::new().with_limits(Limits::strict()))
+    DftDocument::open_with_options(path, &DftOpenOptions::new().with_limits(Limits::strict()))
       .unwrap_or_else(|err| panic!("{} should open as compound file: {err}", path.display()));
 
   let report = document

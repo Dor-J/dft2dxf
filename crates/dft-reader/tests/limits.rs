@@ -20,7 +20,7 @@ fn open_options_applies_custom_limits() {
 
   let mut limits = Limits::strict();
   limits.max_file_size = 1;
-  let result = DftDocument::open_with_options(&path, DftOpenOptions::new().with_limits(limits));
+  let result = DftDocument::open_with_options(&path, &DftOpenOptions::new().with_limits(limits));
   assert!(result.is_err());
 }
 

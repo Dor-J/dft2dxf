@@ -9,7 +9,7 @@ fn opens_synthetic_dft_and_extracts_emf() {
   build_minimal_dft(&path, &MinimalDftSpec::one_sheet("Sheet1", emf)).unwrap();
 
   let mut document =
-    DftDocument::open_with_options(&path, DftOpenOptions::new().with_limits(Limits::strict()))
+    DftDocument::open_with_options(&path, &DftOpenOptions::new().with_limits(Limits::strict()))
       .unwrap();
   let report = document.inspect().unwrap();
   assert!(report.storage.has_viewer_info);

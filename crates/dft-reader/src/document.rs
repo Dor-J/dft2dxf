@@ -17,17 +17,9 @@ use crate::storage::{
 };
 
 /// Options used when opening a `.dft` file.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct DftOpenOptions {
   limits: Limits,
-}
-
-impl Default for DftOpenOptions {
-  fn default() -> Self {
-    Self {
-      limits: Limits::strict(),
-    }
-  }
 }
 
 impl DftOpenOptions {
@@ -76,12 +68,20 @@ pub struct DftDocument {
 
 impl DftDocument {
   /// Opens a `.dft` file from disk.
+  ///
+  /// # Errors
+  ///
+  /// Returns [`DftError`] if the file cannot be read or is not a valid compound file.
   pub fn open(path: impl AsRef<Path>) -> DftResult<Self> {
-    Self::open_with_options(path, DftOpenOptions::default())
+    Self::open_with_options(path, &DftOpenOptions::default())
   }
 
   /// Opens a `.dft` file using custom options.
-  pub fn open_with_options(path: impl AsRef<Path>, options: DftOpenOptions) -> DftResult<Self> {
+  ///
+  /// # Errors
+  ///
+  /// Returns [`DftError`] if the file cannot be read or is not a valid compound file.
+  pub fn open_with_options(path: impl AsRef<Path>, options: &DftOpenOptions) -> DftResult<Self> {
     let path = path.as_ref().to_path_buf();
     let limits = options.limits();
     let compound = open_compound_file(&path, &limits)?;
@@ -106,6 +106,10 @@ impl DftDocument {
   }
 
   /// Builds an inspection report without extracting EMF payloads.
+  ///
+  /// # Errors
+  ///
+  /// Returns [`DftError`] if storage traversal or metadata parsing fails.
   pub fn inspect(&mut self) -> DftResult<InspectReport> {
     let path = self.path.clone();
     let storage = build_storage_tree(&mut self.compound, &self.limits)?;
@@ -119,11 +123,20 @@ impl DftDocument {
   }
 
   /// Returns all sheets declared in viewer metadata.
+  ///
+  /// # Errors
+  ///
+  /// Returns [`DftError`] if viewer metadata cannot be loaded or parsed.
   pub fn sheets(&mut self) -> DftResult<Vec<Sheet>> {
     Ok(self.load_parsed()?.sheets.clone())
   }
 
   /// Returns one sheet by one-based index.
+  ///
+  /// # Errors
+  ///
+  /// Returns [`DftError::SheetOutOfRange`] when `one_based_index` is not declared, or
+  /// [`DftError`] if viewer metadata cannot be loaded or parsed.
   pub fn sheet(&mut self, one_based_index: u32) -> DftResult<Sheet> {
     let parsed = self.load_parsed()?;
     parsed
@@ -133,11 +146,16 @@ impl DftDocument {
       .cloned()
       .ok_or(DftError::SheetOutOfRange {
         index: one_based_index,
-        max: parsed.sheets.len() as u32,
+        max: u32::try_from(parsed.sheets.len()).unwrap_or(u32::MAX),
       })
   }
 
   /// Extracts the EMF payload for one sheet (one-based index).
+  ///
+  /// # Errors
+  ///
+  /// Returns [`DftError`] if the sheet is out of range, the stream is missing, decompression
+  /// fails, or the payload is not a valid EMF.
   pub fn extract_emf(&mut self, one_based_index: u32) -> DftResult<ExtractedEmf> {
     let sheet = self.sheet(one_based_index)?;
     let data = extract_sheet_emf(&mut self.compound, &sheet, &self.limits)?;

@@ -241,7 +241,7 @@ fn cmd_inspect(input: &PathBuf, limits: Limits, format: OutputFormat) -> Result<
     DftContainerFormat::CncKad => cmd_inspect_cnckad(input, limits, format),
     DftContainerFormat::SolidEdgeCompound => {
       let mut document =
-        DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
+        DftDocument::open_with_options(input, &DftOpenOptions::new().with_limits(limits))?;
       let report = document.inspect().context("inspect failed")?;
       output::render_inspect(&report, format)?;
       Ok(())
@@ -257,7 +257,7 @@ fn cmd_extract_emf(
   format: OutputFormat,
 ) -> Result<()> {
   let mut document =
-    DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
+    DftDocument::open_with_options(input, &DftOpenOptions::new().with_limits(limits))?;
   let sheets = document.sheets().context("failed to read sheets")?;
   let targets: Vec<u32> = match sheet {
     Some(index) => vec![index],
@@ -286,7 +286,7 @@ fn cmd_validate(input: &PathBuf, limits: Limits, format: OutputFormat) -> Result
     DftContainerFormat::CncKad => cmd_validate_cnckad(input, limits, format),
     DftContainerFormat::SolidEdgeCompound => {
       let mut document =
-        DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
+        DftDocument::open_with_options(input, &DftOpenOptions::new().with_limits(limits))?;
       let report = document.inspect().context("inspect failed")?;
       if !report.storage.has_viewer_info || !report.storage.has_document_info {
         anyhow::bail!("missing required JDraftViewerInfo metadata");
@@ -335,7 +335,7 @@ fn cmd_convert_solid_edge(
   units: Option<&str>,
 ) -> Result<()> {
   let mut document =
-    DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
+    DftDocument::open_with_options(input, &DftOpenOptions::new().with_limits(limits))?;
   let sheets = document.sheets().context("failed to read sheets")?;
   let index = sheet.unwrap_or_else(|| sheets.first().map(|s| s.index).unwrap_or(1));
   let sheet_meta = document.sheet(index).context("sheet lookup failed")?;
@@ -498,7 +498,7 @@ fn load_drawing_for_summary(input: &Path, limits: Limits) -> Result<drawing_ir::
     }
     DftContainerFormat::SolidEdgeCompound => {
       let mut document =
-        DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
+        DftDocument::open_with_options(input, &DftOpenOptions::new().with_limits(limits))?;
       let index = document
         .sheets()?
         .first()

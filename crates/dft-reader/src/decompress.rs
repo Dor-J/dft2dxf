@@ -8,6 +8,11 @@ use crate::error::{DftError, DftResult};
 use crate::limits::Limits;
 
 /// Decompresses zlib-wrapped data with output and input size limits.
+///
+/// # Errors
+///
+/// Returns [`DftError::LimitExceeded`] when input or output exceeds configured limits, or
+/// [`DftError::DecompressionFailed`] when the zlib stream is invalid.
 pub fn decompress_zlib_bounded(
   compressed: &[u8],
   stream_name: &str,
