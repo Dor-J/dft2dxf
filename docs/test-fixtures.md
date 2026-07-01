@@ -36,10 +36,12 @@ deterministic, and unencumbered.
 
 ## Contributing samples
 
-If you can share anonymized or synthetic DFT samples, open an issue describing:
+If you can share anonymized samples, open an issue describing:
 
 - Solid Edge version
 - what the drawing contains
 - whether redistribution in the repository is permitted
+
+For the first **real** `.dft` fixture, follow [tests/fixtures/valid/INTAKE.md](../tests/fixtures/valid/INTAKE.md).
 
 Do not attach proprietary customer files to public issues.

@@ -48,7 +48,8 @@ SVG is the primary validation output. DXF conversion maps visible EMF graphics i
 portable DXF entities where possible.
 
 Text, fills, clipping, embedded rasters, custom line styles, complex transforms,
-and unsupported EMF records may have reduced fidelity or be emitted as diagnostics.
+arcs (SVG and DXF), and unsupported EMF records may have reduced fidelity or be omitted
+with diagnostics where implemented.
 
 ## Security
 
@@ -90,8 +91,9 @@ emf.write_to("sheet-1.emf")?;
 ## Contributing fixtures
 
 Do not submit proprietary customer drawings without explicit written permission.
-Prefer synthetic or anonymized samples. See [docs/test-fixtures.md](docs/test-fixtures.md)
-and [docs/ROADMAP.md](docs/ROADMAP.md) (milestone M1).
+Prefer synthetic or anonymized samples. See [docs/test-fixtures.md](docs/test-fixtures.md),
+[tests/fixtures/valid/INTAKE.md](tests/fixtures/valid/INTAKE.md), and
+[docs/ROADMAP.md](docs/ROADMAP.md) (milestone M1).
 
 ## License
 

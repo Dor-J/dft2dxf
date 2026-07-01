@@ -231,7 +231,7 @@ fn cmd_convert(
   )
   .context("EMF parse failed")?;
 
-  let drawing = emf_reader::replay_to_drawing(
+  let mut drawing = emf_reader::replay_to_drawing(
     &emf_doc,
     Some(sheet_meta.index),
     Some(sheet_meta.name.clone()),
@@ -239,7 +239,7 @@ fn cmd_convert(
     Some(sheet_meta.info.height),
   );
 
-  drawing_dxf::write_drawing_to_file(&drawing, output)
+  drawing_dxf::write_drawing_to_file(&mut drawing, output)
     .with_context(|| format!("failed to write DXF to {}", output.display()))?;
 
   if let Some(dir) = svg_preview {

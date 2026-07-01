@@ -132,7 +132,10 @@ fn render_entity(entity: &drawing_ir::Entity) -> svg::node::element::Group {
         .set("fill", stroke)
         .add(TextNode::new(text.text.as_str())),
     ),
-    EntityKind::Arc(_) => Group::new(),
+    EntityKind::Arc(_) => {
+      // Intentionally omitted: no SVG arc path until proper arc geometry is implemented.
+      Group::new()
+    }
   }
 }
 

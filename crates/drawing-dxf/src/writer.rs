@@ -2,17 +2,28 @@
 
 use std::path::Path;
 
+use drawing_ir::{Diagnostic, EntityKind};
 use dxf::entities::*;
 use dxf::{Drawing, Entity, EntityType, Point as DxfPoint};
 
 use crate::error::{DxfError, DxfResult};
 
 /// Writes a drawing IR document to a DXF file.
-pub fn write_drawing_to_file(drawing: &drawing_ir::Drawing, path: &Path) -> DxfResult<()> {
+///
+/// Arc entities are omitted and recorded as [`Diagnostic`] entries because mapping a
+/// partial arc to a full `CIRCLE` would change geometry.
+pub fn write_drawing_to_file(drawing: &mut drawing_ir::Drawing, path: &Path) -> DxfResult<()> {
   let mut dxf = Drawing::new();
 
   for sheet in &drawing.sheets {
     for entity in &sheet.entities {
+      if matches!(entity.kind, EntityKind::Arc(_)) {
+        drawing.push_diagnostic(Diagnostic::unsupported_dxf_entity(
+          "Arc",
+          "DXF ARC export is not implemented; entity omitted (no CIRCLE substitution)",
+        ));
+        continue;
+      }
       if let Some(dxf_entity) = map_entity(entity) {
         dxf.add_entity(dxf_entity);
       }
@@ -91,12 +102,7 @@ fn map_entity(entity: &drawing_ir::Entity) -> Option<Entity> {
       let lw = path_to_lwpolyline(path)?;
       EntityType::LwPolyline(lw)
     }
-    drawing_ir::EntityKind::Arc(arc) => {
-      let mut circle = Circle::default();
-      circle.center = dxf_point(&arc.center);
-      circle.radius = arc.radius;
-      EntityType::Circle(circle)
-    }
+    drawing_ir::EntityKind::Arc(_) => return None,
   };
 
   Some(Entity::new(specific))

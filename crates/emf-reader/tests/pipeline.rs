@@ -40,11 +40,11 @@ fn end_to_end_synthetic_pipeline() {
     DEFAULT_MAX_RECORD_SIZE,
   )
   .unwrap();
-  let drawing = replay_to_drawing(&emf_doc, Some(1), Some("A".to_string()), None, None);
+  let mut drawing = replay_to_drawing(&emf_doc, Some(1), Some("A".to_string()), None, None);
   let svg = drawing_svg::write_drawing_to_string(&drawing).unwrap();
   assert!(svg.contains("svg"));
 
   let dxf_path = dir.path().join("out.dxf");
-  drawing_dxf::write_drawing_to_file(&drawing, &dxf_path).unwrap();
+  drawing_dxf::write_drawing_to_file(&mut drawing, &dxf_path).unwrap();
   assert!(dxf_path.exists());
 }

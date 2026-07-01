@@ -38,5 +38,16 @@ Per sheet:
 
 1. Run `dft2dxf inspect` on permitted fixtures
 2. Extract EMF with `dft2dxf extract-emf`
-3. Validate EMF independently with external viewers/renderers
-4. Record findings in fixture provenance notes
+3. Validate EMF independently with external viewers/renderers (manual; not a runtime dependency)
+4. Record findings in `tests/fixtures/valid/PROVENANCE.md`
+
+## Real fixture status (M1)
+
+No committed real `.dft` file yet. Expected path:
+
+```text
+tests/fixtures/valid/real-solid-edge.dft
+```
+
+Smoke test: `crates/dft-reader/tests/real_fixture.rs::opens_and_extracts_emf_from_real_solid_edge_dft_fixture`
+(skips when file absent). Intake process: `tests/fixtures/valid/INTAKE.md`.

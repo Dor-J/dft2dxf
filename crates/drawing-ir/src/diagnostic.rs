@@ -64,4 +64,15 @@ impl Diagnostic {
       }),
     }
   }
+
+  /// Creates a diagnostic for a Drawing IR entity that cannot be exported to DXF.
+  #[must_use]
+  pub fn unsupported_dxf_entity(entity_kind: &str, message: impl Into<String>) -> Self {
+    Self {
+      severity: DiagnosticSeverity::Warning,
+      code: "dxf.unsupported_entity".to_string(),
+      message: format!("{entity_kind}: {}", message.into()),
+      provenance: None,
+    }
+  }
 }

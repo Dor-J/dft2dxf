@@ -45,8 +45,7 @@ and a recorded verification baseline.
 **Why it cannot be skipped:** Without a honest baseline, later milestones cannot be judged;
 fmt/CRLF failures block CI on Linux.
 
-**Status:** Complete in working tree (pending commit). Compile/test verification blocked
-locally by missing `link.exe`.
+**Status:** Complete in working tree. `cargo fmt --check` verified; compile/test blocked locally by missing `link.exe`.
 
 ---
 
@@ -57,34 +56,32 @@ file independent of synthetic builders.
 
 **Scope:**
 
-- Acquire or author one redistributable `.dft` (anonymized customer drawing, Solid Edge
-  sample with permission, or contributor-provided file documented in `PROVENANCE.md`)
+- Acquire or author one redistributable `.dft` documented in `PROVENANCE.md`
 - Smoke test: open → inspect → `extract_emf(1)` → valid EMF signature
-- Optional: write extracted EMF to temp file in test; compare size/header fields to metadata
-- Document Solid Edge version, sheet count, and redistribution terms
+- Fixture intake template and investigated-sources log
+- Correct arc documentation (SVG omitted; DXF arc omitted with diagnostic)
 
-**Non-goals:** Full conversion, EMF replay fidelity, golden SVG/DXF from real files.
+**Non-goals:** Full conversion, EMF replay fidelity, golden SVG/DXF from real files, DXF `ARC` implementation.
 
 **Acceptance criteria:**
 
-- `tests/fixtures/valid/<name>.dft` committed with complete provenance
-- Integration test passes in CI on all three OS targets
-- `dft2dxf validate <fixture>` succeeds when run manually
-- `IMPLEMENTATION-STATUS.md` updated: real DFT row → Verified after CI green
+- `tests/fixtures/valid/real-solid-edge.dft` committed with complete provenance **OR** honest blocker documented
+- `opens_and_extracts_emf_from_real_solid_edge_dft_fixture` runs assertions when fixture present
+- `INTAKE.md` describes remaining human steps
+- No unsafe `Arc → CIRCLE` DXF mapping
+- SVG arc not described as implemented
 
-**Fixtures required:** ≥1 real `.dft` with signed-off provenance.
+**Fixtures required:** ≥1 real `.dft` with signed-off provenance (canonical name: `real-solid-edge.dft`).
 
-**Tests required:** `dft-reader` integration test (e.g. `opens_real_dft_fixture.rs`);
-optional CLI smoke test.
+**Tests required:** `crates/dft-reader/tests/real_fixture.rs`; `omits_arc_entities_and_records_diagnostic` in `drawing-dxf`.
 
-**Likely files:** `tests/fixtures/valid/`, `crates/dft-reader/tests/`,
-`docs/test-fixtures.md`, `IMPLEMENTATION-STATUS.md`.
+**Likely files:** `tests/fixtures/valid/`, `crates/dft-reader/tests/real_fixture.rs`, `drawing-dxf/src/writer.rs`, docs.
 
-**Risks:** License restrictions; layout variance across Solid Edge versions; large binaries
-in git (may need Git LFS or minimal sample).
+**Risks:** No public redistributable `.dft` found in automation environment; license ambiguity.
 
-**Why it cannot be skipped:** Synthetic CFB files mirror assumptions encoded in
-`dft2dxf-testkit`; only real files validate those assumptions.
+**Why it cannot be skipped:** Synthetic CFB files do not validate Solid Edge compatibility.
+
+**Status:** **Partially completed / blocked.** Intake process, smoke-test scaffold, arc fixes, and docs are in place. **No real `.dft` committed.** Human must add `real-solid-edge.dft` per `INTAKE.md` to finish M1.
 
 ---
 
