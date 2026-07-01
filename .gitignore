@@ -1,9 +1,44 @@
+# Rust
 /target
+/fuzz/target
 **/*.rs.bk
-*.emf
+*.pdb
+
+# Project inputs/outputs (proprietary or generated)
 *.dft
+!tests/fixtures/**/*.dft
+*.emf
+*.dxf
+/debug/
+/preview/
+/output.dxf
+/*.svg
+/debug/**/*.svg
+/preview/**/*.svg
+
+# Golden / snapshot tooling
+*.snap.new
+
+# Fuzzing
+/fuzz/corpus/
+/fuzz/artifacts/
+
+# Tooling
+/cargo-deny.log
+*.log
+
+# OS
 .DS_Store
 Thumbs.db
-/fuzz/target
-/cargo-deny.log
-*.snap.new
+desktop.ini
+ehthumbs.db
+
+# IDE
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+# Secrets
+.env
+.env.*

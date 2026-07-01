@@ -1,0 +1,24 @@
+[package]
+name = "dft-reader"
+description = "Read Solid Edge .dft compound files and extract embedded EMF sheet data"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+cfb = { workspace = true }
+flate2 = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+cfb = { workspace = true }
+dft2dxf-testkit = { workspace = true }
+flate2 = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true
