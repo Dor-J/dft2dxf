@@ -1,0 +1,22 @@
+[package]
+name = "drawing-svg"
+description = "Serialize Drawing IR to deterministic SVG"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+drawing-ir = { workspace = true }
+svg = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }
+dft2dxf-testkit = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true
