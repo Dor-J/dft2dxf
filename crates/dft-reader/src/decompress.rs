@@ -36,10 +36,12 @@ pub(crate) fn decompress_zlib(
   let mut buffer = [0u8; 8192];
 
   loop {
-    let read = decoder.read(&mut buffer).map_err(|err| DftError::DecompressionFailed {
-      stream: stream_name.to_string(),
-      message: err.to_string(),
-    })?;
+    let read = decoder
+      .read(&mut buffer)
+      .map_err(|err| DftError::DecompressionFailed {
+        stream: stream_name.to_string(),
+        message: err.to_string(),
+      })?;
     if read == 0 {
       break;
     }

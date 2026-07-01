@@ -19,7 +19,8 @@ pub fn write_drawing_to_file(drawing: &drawing_ir::Drawing, path: &Path) -> DxfR
     }
   }
 
-  dxf.save_file(path)
+  dxf
+    .save_file(path)
     .map_err(|err| DxfError::Write(err.to_string()))?;
   Ok(())
 }

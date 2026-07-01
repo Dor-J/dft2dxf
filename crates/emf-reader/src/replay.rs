@@ -208,7 +208,9 @@ fn parse_text_record(record: &EmfRecord) -> Option<(Point, String)> {
   let text = if record.record_type == EMR_EXTTEXTOUTW {
     decode_utf16_le(string_bytes).unwrap_or_default()
   } else {
-    String::from_utf8_lossy(string_bytes).trim_end_matches('\0').to_string()
+    String::from_utf8_lossy(string_bytes)
+      .trim_end_matches('\0')
+      .to_string()
   };
   if text.is_empty() {
     return None;

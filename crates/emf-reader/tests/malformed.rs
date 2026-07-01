@@ -1,4 +1,4 @@
-use emf_reader::{EmfError, EmfDocument, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE};
+use emf_reader::{EmfDocument, EmfError, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE};
 
 #[test]
 fn rejects_emf_without_eof() {
@@ -6,7 +6,8 @@ fn rejects_emf_without_eof() {
   data[0..4].copy_from_slice(&1u32.to_le_bytes());
   data[4..8].copy_from_slice(&88u32.to_le_bytes());
   data[40..44].copy_from_slice(&0x0000_464Du32.to_le_bytes());
-  let err = EmfDocument::parse(&data, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE).unwrap_err();
+  let err =
+    EmfDocument::parse(&data, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE).unwrap_err();
   assert!(matches!(err, EmfError::MissingEof));
 }
 
@@ -16,14 +17,16 @@ fn rejects_misaligned_record_size() {
   data[0..4].copy_from_slice(&1u32.to_le_bytes());
   data[4..8].copy_from_slice(&87u32.to_le_bytes());
   data[40..44].copy_from_slice(&0x0000_464Du32.to_le_bytes());
-  let err = EmfDocument::parse(&data, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE).unwrap_err();
+  let err =
+    EmfDocument::parse(&data, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE).unwrap_err();
   assert!(matches!(err, EmfError::InvalidFormat { .. }));
 }
 
 #[test]
 fn rejects_truncated_record_header() {
   let data = vec![0x01, 0x00, 0x00, 0x00];
-  let err = EmfDocument::parse(&data, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE).unwrap_err();
+  let err =
+    EmfDocument::parse(&data, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE).unwrap_err();
   assert!(matches!(err, EmfError::InvalidFormat { .. }));
 }
 

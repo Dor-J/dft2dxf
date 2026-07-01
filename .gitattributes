@@ -1,0 +1,22 @@
+# Normalize text files to LF in the repository and working tree on checkout.
+* text=auto eol=lf
+
+# Rust sources and project metadata
+*.rs text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.sh text eol=lf
+*.snap text eol=lf
+*.svg text eol=lf
+
+# Fixture provenance and documentation alongside binary fixtures
+tests/fixtures/**/PROVENANCE.md text eol=lf
+
+# Binary fixtures must not be line-ending normalized
+*.bin binary
+*.dft binary
+*.emf binary
+*.dxf binary

@@ -1,15 +1,18 @@
-use dft2dxf_testkit::{build_line_emf, build_minimal_dft, is_emf, MinimalDftSpec};
+use dft2dxf_testkit::{build_minimal_dft, build_rectangle_emf, is_emf, MinimalDftSpec};
 use dft_reader::DftDocument;
 
 #[test]
 fn extracts_all_sheets_from_multi_sheet_dft() {
   let dir = tempfile::tempdir().unwrap();
   let path = dir.path().join("multi.dft");
-  let emf_a = build_line_emf(0, 0, 50, 50);
-  let emf_b = build_line_emf(10, 10, 90, 90);
+  let emf_a = build_rectangle_emf(0, 0, 50, 50);
+  let emf_b = build_rectangle_emf(10, 10, 90, 90);
   build_minimal_dft(
     &path,
-    &MinimalDftSpec::multi_sheet(vec![("SheetA".to_string(), emf_a), ("SheetB".to_string(), emf_b)]),
+    &MinimalDftSpec::multi_sheet(vec![
+      ("SheetA".to_string(), emf_a),
+      ("SheetB".to_string(), emf_b),
+    ]),
   )
   .unwrap();
 

@@ -1,5 +1,5 @@
 use dft2dxf_testkit::{build_minimal_dft, build_rectangle_emf, is_emf, MinimalDftSpec};
-use dft_reader::{DftDocument, DftOpenOptions, DftError, Limits};
+use dft_reader::{DftDocument, DftError, DftOpenOptions, Limits};
 
 #[test]
 fn opens_synthetic_dft_and_extracts_emf() {

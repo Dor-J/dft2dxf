@@ -43,6 +43,10 @@ impl EmfError {
   }
 
   pub(crate) fn limit(kind: &'static str, limit: u64, actual: u64) -> Self {
-    Self::LimitExceeded { kind, limit, actual }
+    Self::LimitExceeded {
+      kind,
+      limit,
+      actual,
+    }
   }
 }

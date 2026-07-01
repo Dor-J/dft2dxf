@@ -90,6 +90,10 @@ pub enum DftError {
 impl DftError {
   /// Builds a limit-exceeded error.
   pub(crate) fn limit(kind: &'static str, limit: u64, actual: u64) -> Self {
-    Self::LimitExceeded { kind, limit, actual }
+    Self::LimitExceeded {
+      kind,
+      limit,
+      actual,
+    }
   }
 }

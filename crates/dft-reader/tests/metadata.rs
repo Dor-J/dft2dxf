@@ -49,14 +49,13 @@ fn parses_valid_metadata_from_synthetic_dft() {
   let dir = tempfile::tempdir().unwrap();
   let path = dir.path().join("sample.dft");
   let emf = dft2dxf_testkit::build_rectangle_emf(0, 0, 10, 10);
-  dft2dxf_testkit::build_minimal_dft(
-    &path,
-    &dft2dxf_testkit::MinimalDftSpec::one_sheet("A", emf),
-  )
-  .unwrap();
+  dft2dxf_testkit::build_minimal_dft(&path, &dft2dxf_testkit::MinimalDftSpec::one_sheet("A", emf))
+    .unwrap();
 
   let mut compound = cfb::CompoundFile::open(&path).unwrap();
-  let mut stream = compound.open_stream("JDraftViewerInfo/JDraftDocumentInfo").unwrap();
+  let mut stream = compound
+    .open_stream("JDraftViewerInfo/JDraftDocumentInfo")
+    .unwrap();
   let mut data = Vec::new();
   std::io::Read::read_to_end(&mut stream, &mut data).unwrap();
 

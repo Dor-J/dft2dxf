@@ -8,7 +8,8 @@ embedded viewer EMF representation and replaying it into a canonical drawing IR.
 - Opens `.dft` files as cross-platform Compound File Binary containers
 - Inspects storage structure and draft viewer metadata
 - Safely extracts embedded per-sheet EMF streams
-- Replays a growing subset of EMF graphics records into Drawing IR
+- Replays a subset of EMF graphics records into Drawing IR (rectangle path tested; other
+  record types have code but limited test coverage)
 - Writes SVG previews and experimental DXF output
 
 ## What this project does **not** do
@@ -26,8 +27,10 @@ embedded viewer EMF representation and replaying it into a canonical drawing IR.
 
 ## Maturity
 
-Early development. The first implementation milestone is safe extraction of embedded per-sheet EMF streams. DXF conversion is
-experimental and fidelity varies by drawing content.
+Early development. Synthetic tests cover DFT inspection, bounded EMF extraction, and a
+rectangle-only EMF replay path into SVG/DXF. **Real Solid Edge `.dft` compatibility is not
+yet validated** — see [docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md).
+DXF conversion is experimental and fidelity varies by drawing content.
 
 ## Compatibility
 
@@ -35,8 +38,9 @@ Support is based on extracting embedded Solid Edge viewer EMF data. Files that d
 not contain compatible viewer streams, use unsupported compression/layout variants,
 or rely on non-embedded background-sheet content may not convert successfully.
 
-The project reports unsupported structures explicitly rather than silently producing
-incomplete output.
+The project records some unsupported EMF record types in Drawing IR diagnostics.
+Control/state records may be skipped silently today; the CLI does not yet print conversion
+diagnostics. See [docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md).
 
 ## Output fidelity
 
@@ -86,7 +90,8 @@ emf.write_to("sheet-1.emf")?;
 ## Contributing fixtures
 
 Do not submit proprietary customer drawings without explicit written permission.
-Prefer synthetic or anonymized samples. See [docs/test-fixtures.md](docs/test-fixtures.md).
+Prefer synthetic or anonymized samples. See [docs/test-fixtures.md](docs/test-fixtures.md)
+and [docs/ROADMAP.md](docs/ROADMAP.md) (milestone M1).
 
 ## License
 

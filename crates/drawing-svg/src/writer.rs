@@ -3,9 +3,7 @@
 use std::io::Write;
 use std::path::Path;
 
-use drawing_ir::{
-  EntityKind, PathSegment, Point,
-};
+use drawing_ir::{EntityKind, PathSegment, Point};
 use svg::node::element::path::Data;
 use svg::node::element::{Group, Line, Path, Polygon, Polyline, Text};
 use svg::node::Text as TextNode;
@@ -47,7 +45,12 @@ fn render_entity(entity: &drawing_ir::Entity) -> svg::node::element::Group {
     .style
     .stroke
     .as_ref()
-    .map(|value| format!("#{:02x}{:02x}{:02x}", value.color.r, value.color.g, value.color.b))
+    .map(|value| {
+      format!(
+        "#{:02x}{:02x}{:02x}",
+        value.color.r, value.color.g, value.color.b
+      )
+    })
     .unwrap_or_else(|| "#000000".to_string());
   let stroke_width = entity
     .style

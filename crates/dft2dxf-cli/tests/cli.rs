@@ -65,12 +65,7 @@ fn inspect_json_output_contains_sheet_metadata() {
 
   Command::cargo_bin("dft2dxf")
     .unwrap()
-    .args([
-      "inspect",
-      dft_path.to_str().unwrap(),
-      "--format",
-      "json",
-    ])
+    .args(["inspect", dft_path.to_str().unwrap(), "--format", "json"])
     .assert()
     .success()
     .stdout(predicate::str::contains("\"has_viewer_info\": true"));

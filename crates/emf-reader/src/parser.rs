@@ -59,11 +59,7 @@ pub struct EmfDocument {
 
 impl EmfDocument {
   /// Parses EMF bytes into records with limits.
-  pub fn parse(
-    data: &[u8],
-    max_records: u32,
-    max_record_size: u32,
-  ) -> EmfResult<Self> {
+  pub fn parse(data: &[u8], max_records: u32, max_record_size: u32) -> EmfResult<Self> {
     if data.len() < 8 {
       return Err(EmfError::invalid("header", "EMF too short"));
     }

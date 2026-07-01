@@ -8,8 +8,6 @@ const EMR_HEADER: u32 = 1;
 const EMR_EOF: u32 = 14;
 /// `EMR_RECTANGLE`
 const EMR_RECTANGLE: u32 = 42;
-/// `EMR_LINETO` (unused directly here)
-const _EMR_LINETO: u32 = 54;
 
 /// Builds a minimal valid EMF containing one rectangle record.
 pub fn build_rectangle_emf(left: i32, top: i32, right: i32, bottom: i32) -> Vec<u8> {
@@ -41,11 +39,6 @@ pub fn build_rectangle_emf(left: i32, top: i32, right: i32, bottom: i32) -> Vec<
   append_record_header(&mut data, EMR_EOF, eof_size);
   data.extend_from_slice(&[0u8; eof_size as usize - 8]);
   data
-}
-
-/// Builds a minimal valid EMF containing one polyline-like rectangle.
-pub fn build_line_emf(x1: i32, y1: i32, x2: i32, y2: i32) -> Vec<u8> {
-  build_rectangle_emf(x1.min(x2), y1.min(y2), x1.max(x2), y1.max(y2))
 }
 
 fn append_record_header(buf: &mut Vec<u8>, record_type: u32, size: u32) {

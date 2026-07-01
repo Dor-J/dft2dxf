@@ -111,9 +111,7 @@ impl DftDocument {
       path: self.path.clone(),
       storage,
       document_info: parsed.as_ref().map(|value| value.document_info.clone()),
-      sheets: parsed
-        .map(|value| value.sheets)
-        .unwrap_or_default(),
+      sheets: parsed.map(|value| value.sheets).unwrap_or_default(),
     })
   }
 
@@ -145,8 +143,7 @@ impl DftDocument {
 
   fn load_parsed(&mut self) -> DftResult<&ParsedDraft> {
     if self.parsed.is_none() {
-      let metadata_path =
-        format!("{STORAGE_J_DRAFT_VIEWER_INFO}/{STREAM_J_DRAFT_DOCUMENT_INFO}");
+      let metadata_path = format!("{STORAGE_J_DRAFT_VIEWER_INFO}/{STREAM_J_DRAFT_DOCUMENT_INFO}");
       let data = read_stream_limited(&mut self.compound, &metadata_path, &self.limits)?;
       let parsed = parse_draft_metadata(&data, &self.limits)?;
       self.parsed = Some(parsed);

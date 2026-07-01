@@ -16,14 +16,21 @@ use crate::metadata::{
 use crate::sheet::Sheet;
 
 /// Opens a compound file with file-size validation.
-pub(crate) fn open_compound_file(path: &Path, limits: &Limits) -> DftResult<CompoundFile<std::fs::File>> {
+pub(crate) fn open_compound_file(
+  path: &Path,
+  limits: &Limits,
+) -> DftResult<CompoundFile<std::fs::File>> {
   let metadata = std::fs::metadata(path).map_err(|source| DftError::Io {
     path: path.to_path_buf(),
     source,
   })?;
   let file_size = metadata.len();
   if file_size > limits.max_file_size {
-    return Err(DftError::limit("max_file_size", limits.max_file_size, file_size));
+    return Err(DftError::limit(
+      "max_file_size",
+      limits.max_file_size,
+      file_size,
+    ));
   }
   CompoundFile::open(path).map_err(|err| match err {
     cfb::Error::InvalidMagic { .. } => DftError::NotCompoundFile {
@@ -44,13 +51,23 @@ pub(crate) fn read_stream_limited<R: Read + Seek>(
     .map_err(|_| DftError::MissingViewerData {
       path: path.to_string(),
     })?;
-  let size = stream.seek(SeekFrom::End(0)).map_err(DftError::CompoundFile)? as u64;
+  let size = stream
+    .seek(SeekFrom::End(0))
+    .map_err(DftError::CompoundFile)? as u64;
   if size > limits.max_stream_size {
-    return Err(DftError::limit("max_stream_size", limits.max_stream_size, size));
+    return Err(DftError::limit(
+      "max_stream_size",
+      limits.max_stream_size,
+      size,
+    ));
   }
-  stream.seek(SeekFrom::Start(0)).map_err(DftError::CompoundFile)?;
+  stream
+    .seek(SeekFrom::Start(0))
+    .map_err(DftError::CompoundFile)?;
   let mut data = vec![0u8; size as usize];
-  stream.read_exact(&mut data).map_err(DftError::CompoundFile)?;
+  stream
+    .read_exact(&mut data)
+    .map_err(DftError::CompoundFile)?;
   Ok(data)
 }
 
@@ -67,9 +84,9 @@ pub(crate) fn build_storage_tree<R: Read + Seek>(
     entry.path.ends_with(STORAGE_J_DRAFT_VIEWER_INFO) && entry.kind == StorageEntryKind::Storage
   });
   let document_info_path = format!("/{STORAGE_J_DRAFT_VIEWER_INFO}/{STREAM_J_DRAFT_DOCUMENT_INFO}");
-  let has_document_info = entries.iter().any(|entry| {
-    entry.path == document_info_path && entry.kind == StorageEntryKind::Stream
-  });
+  let has_document_info = entries
+    .iter()
+    .any(|entry| entry.path == document_info_path && entry.kind == StorageEntryKind::Stream);
 
   Ok(StorageTree {
     entries,
@@ -111,10 +128,7 @@ fn walk_storage<R: Read + Seek>(
       ));
     }
 
-    let entry_path = entry
-      .path()
-      .to_string_lossy()
-      .replace('\\', "/");
+    let entry_path = entry.path().to_string_lossy().replace('\\', "/");
 
     if entry.is_storage() {
       entries.push(StorageEntry {
@@ -122,7 +136,14 @@ fn walk_storage<R: Read + Seek>(
         kind: StorageEntryKind::Storage,
         size: None,
       });
-      walk_storage(compound, &entry_path, limits, entries, entry_count, depth + 1)?;
+      walk_storage(
+        compound,
+        &entry_path,
+        limits,
+        entries,
+        entry_count,
+        depth + 1,
+      )?;
     } else if entry.is_stream() {
       entries.push(StorageEntry {
         path: entry_path,
@@ -187,20 +208,20 @@ pub(crate) fn parse_draft_metadata(data: &[u8], limits: &Limits) -> DftResult<Pa
         message: format!("negative name length {name_units}"),
       });
     }
-    let byte_len = (name_units as usize)
-      .checked_mul(2)
-      .ok_or_else(|| DftError::InvalidMetadata {
-        context: format!("sheet[{index}].name_length"),
-        message: "name length overflow".to_string(),
-      })?;
+    let byte_len =
+      (name_units as usize)
+        .checked_mul(2)
+        .ok_or_else(|| DftError::InvalidMetadata {
+          context: format!("sheet[{index}].name_length"),
+          message: "name length overflow".to_string(),
+        })?;
     let mut name = cursor.read_utf16_le(byte_len, &format!("sheet[{index}].name"))?;
     name = name.trim_end_matches('\0').to_string();
 
     let width = cursor.read_f64_le(&format!("sheet[{index}].width"))?;
     let height = cursor.read_f64_le(&format!("sheet[{index}].height"))?;
     let emf_size = cursor.read_u32_le(&format!("sheet[{index}].emf_size"))?;
-    let emf_compressed_size =
-      cursor.read_u32_le(&format!("sheet[{index}].emf_compressed_size"))?;
+    let emf_compressed_size = cursor.read_u32_le(&format!("sheet[{index}].emf_compressed_size"))?;
 
     sheets.push(Sheet {
       index: index + 1,

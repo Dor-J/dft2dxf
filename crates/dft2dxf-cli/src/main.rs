@@ -152,7 +152,8 @@ fn build_limits(cli: &Cli) -> Limits {
 }
 
 fn cmd_inspect(input: &PathBuf, limits: Limits, format: OutputFormat) -> Result<()> {
-  let mut document = DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
+  let mut document =
+    DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
   let report = document.inspect().context("inspect failed")?;
   output::render_inspect(&report, format)?;
   Ok(())
@@ -165,7 +166,8 @@ fn cmd_extract_emf(
   limits: Limits,
   format: OutputFormat,
 ) -> Result<()> {
-  let mut document = DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
+  let mut document =
+    DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
   let sheets = document.sheets().context("failed to read sheets")?;
   let targets: Vec<u32> = match sheet {
     Some(index) => vec![index],
@@ -190,7 +192,8 @@ fn cmd_extract_emf(
 }
 
 fn cmd_validate(input: &PathBuf, limits: Limits, format: OutputFormat) -> Result<()> {
-  let mut document = DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
+  let mut document =
+    DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
   let report = document.inspect().context("inspect failed")?;
   if !report.storage.has_viewer_info || !report.storage.has_document_info {
     anyhow::bail!("missing required JDraftViewerInfo metadata");
@@ -212,7 +215,8 @@ fn cmd_convert(
   svg_preview: Option<PathBuf>,
   limits: Limits,
 ) -> Result<()> {
-  let mut document = DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
+  let mut document =
+    DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
   let sheets = document.sheets().context("failed to read sheets")?;
   let index = sheet.unwrap_or_else(|| sheets.first().map(|s| s.index).unwrap_or(1));
   let sheet_meta = document.sheet(index).context("sheet lookup failed")?;

@@ -5,8 +5,8 @@ use dft_reader::{decompress_zlib_bounded, DftDocument, DftError, Limits};
 
 #[test]
 fn rejects_invalid_zlib_stream() {
-  let err = decompress_zlib_bounded(&invalid_zlib_payload(), "test", &Limits::strict())
-    .unwrap_err();
+  let err =
+    decompress_zlib_bounded(&invalid_zlib_payload(), "test", &Limits::strict()).unwrap_err();
   assert!(matches!(err, DftError::DecompressionFailed { .. }));
 }
 
