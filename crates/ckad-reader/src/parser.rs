@@ -16,6 +16,11 @@ use crate::style::{inline_color, inline_layer_id, EntityMeta};
 pub const DEFAULT_MAX_FILE_SIZE: u64 = 50 * 1024 * 1024;
 
 /// Reads a cncKad text `.dft` file into [`Drawing`] IR.
+///
+/// # Errors
+///
+/// Returns [`CkadError`] if the file cannot be read, exceeds `max_file_size`, is not recognized
+/// as cncKad text, or contains invalid drawing data.
 pub fn read_to_drawing(path: &Path, max_file_size: u64) -> CkadResult<Drawing> {
   let bytes = std::fs::read(path).map_err(|source| CkadError::Io {
     path: path.to_path_buf(),
@@ -53,18 +58,21 @@ fn decode_utf16_le(bytes: &[u8]) -> String {
 }
 
 /// Parses cncKad text content into [`Drawing`] IR.
+///
+/// # Errors
+///
+/// Returns [`CkadError`] if any recognized section contains invalid numeric or geometry data.
 pub fn parse_content(content: &str, source_path: Option<String>) -> CkadResult<Drawing> {
   let sections = split_sections(content);
   let (part_name, customer) = sections
     .get(&100)
-    .map(|lines| parse_part_section(lines))
-    .unwrap_or((None, None));
+    .map_or((None, None), |lines| parse_part_section(lines));
   let (width, height, mut metadata) = sections
     .get(&200)
     .map(|lines| parse_sheet_section(lines))
     .transpose()?
     .unwrap_or((None, None, drawing_ir::DrawingMetadata::default()));
-  metadata.part_name = part_name.clone();
+  metadata.part_name.clone_from(&part_name);
   metadata.customer = customer;
   if let Some(k_factor) = sections.get(&210).map(|lines| parse_kfactor_section(lines)) {
     metadata.k_factor = k_factor;
@@ -87,8 +95,8 @@ pub fn parse_content(content: &str, source_path: Option<String>) -> CkadResult<D
   }
 
   let cam = parse_cam(
-    sections.get(&1100).map(|lines| lines.as_slice()),
-    sections.get(&1200).map(|lines| lines.as_slice()),
+    sections.get(&1100).map(Vec::as_slice),
+    sections.get(&1200).map(Vec::as_slice),
   )?;
   let cam = if cam.tools.is_empty() && cam.operations.is_empty() {
     None
@@ -149,10 +157,10 @@ fn parse_geometry_section(lines: &[String], context: &str) -> CkadResult<Vec<Ent
     match lines[index].as_str() {
       "LINES" => {
         index += 1;
-        let count = read_count(&lines, &mut index, context)?;
+        let count = read_count(lines, &mut index, context)?;
         for _ in 0..count {
-          let coords = read_float_line(&lines, &mut index, context)?;
-          let meta = read_metadata_line(&lines, &mut index);
+          let coords = read_float_line(lines, &mut index, context)?;
+          let meta = read_metadata_line(lines, &mut index);
           if coords.len() >= 4 {
             entities.push(line_entity(
               coords[0], coords[1], coords[2], coords[3], meta,
@@ -162,14 +170,14 @@ fn parse_geometry_section(lines: &[String], context: &str) -> CkadResult<Vec<Ent
       }
       "POINTS" => {
         index += 1;
-        let count = read_count(&lines, &mut index, context)?;
+        let count = read_count(lines, &mut index, context)?;
         index = index.saturating_add(count);
       }
       "CIRCLES" => {
         index += 1;
-        let count = read_count(&lines, &mut index, context)?;
+        let count = read_count(lines, &mut index, context)?;
         for _ in 0..count {
-          let coords = read_float_line(&lines, &mut index, context)?;
+          let coords = read_float_line(lines, &mut index, context)?;
           if coords.len() >= 3 {
             let meta = entity_meta_from_inline(&coords);
             entities.push(circle_entity(coords[0], coords[1], coords[2], meta));
@@ -178,14 +186,14 @@ fn parse_geometry_section(lines: &[String], context: &str) -> CkadResult<Vec<Ent
       }
       "ARCS" => {
         index += 1;
-        let count = read_count(&lines, &mut index, context)?;
+        let count = read_count(lines, &mut index, context)?;
         for _ in 0..count {
-          let header = read_float_line(&lines, &mut index, context)?;
+          let header = read_float_line(lines, &mut index, context)?;
           if header.len() < 3 {
             continue;
           }
           let meta = entity_meta_from_inline(&header);
-          let (start_deg, end_deg) = read_arc_angles(&lines, &mut index, context)?;
+          let (start_deg, end_deg) = read_arc_angles(lines, &mut index, context)?;
           entities.push(arc_entity(
             header[0], header[1], header[2], start_deg, end_deg, meta,
           ));

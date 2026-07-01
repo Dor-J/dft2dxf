@@ -1,3 +1,5 @@
+//! Metadata parser tests for Solid Edge `.dft` viewer info.
+
 use std::path::PathBuf;
 
 use dft2dxf_testkit::{

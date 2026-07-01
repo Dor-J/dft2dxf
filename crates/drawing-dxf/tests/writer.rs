@@ -1,3 +1,5 @@
+//! DXF writer integration tests.
+
 mod fixtures;
 
 use dft2dxf_testkit::{build_minimal_dft, build_rectangle_emf, MinimalDftSpec};

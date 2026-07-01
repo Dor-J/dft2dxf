@@ -1,3 +1,5 @@
+//! CLI integration tests.
+
 use assert_cmd::Command;
 use dft2dxf_testkit::{
   build_minimal_dft, build_rectangle_emf, minimal_cnckad_dft, professional_cnckad_dft,

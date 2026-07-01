@@ -20,7 +20,7 @@ pub fn parse_tool_section(lines: &[String]) -> CkadResult<Vec<CamTool>> {
         let kind = parts[0].to_string();
         let size = parts[1]
           .parse::<f64>()
-          .map_err(|err| parse_err("tool size", line, err.to_string()))?;
+          .map_err(|err| parse_err("tool size", line, &err.to_string()))?;
         let size2 = parts.get(2).and_then(|value| value.parse::<f64>().ok());
         let mut comment = None;
         index += 1;
@@ -117,14 +117,7 @@ fn parse_single_position(line: &str) -> Option<Point> {
 
 fn parse_single_tool_index(line: &str) -> Option<u32> {
   let values = parse_floats(line);
-  values.get(3).and_then(|value| {
-    let index = *value as u32;
-    if index > 0 {
-      Some(index)
-    } else {
-      None
-    }
-  })
+  values.get(3).and_then(|value| f64_to_u32(*value))
 }
 
 fn parse_quoted_comment(text: &str) -> String {
@@ -143,14 +136,27 @@ fn parse_floats(line: &str) -> Vec<f64> {
     .collect()
 }
 
-fn parse_err(context: &str, line: &str, message: String) -> CkadError {
+fn parse_err(context: &str, line: &str, message: &str) -> CkadError {
   CkadError::InvalidFormat {
     context: context.to_string(),
     message: format!("invalid token in {line:?}: {message}"),
   }
 }
 
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn f64_to_u32(value: f64) -> Option<u32> {
+  if value.is_finite() && value.fract() == 0.0 && value > 0.0 && value <= f64::from(u32::MAX) {
+    Some(value as u32)
+  } else {
+    None
+  }
+}
+
 /// Parses CAM sections into a [`CamProgram`].
+///
+/// # Errors
+///
+/// Returns [`CkadError`] if either CAM section contains invalid numeric data.
 pub fn parse_cam(
   tools: Option<&[String]>,
   operations: Option<&[String]>,

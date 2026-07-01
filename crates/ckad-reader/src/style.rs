@@ -1,4 +1,4 @@
-//! cncKad AutoCAD Color Index (ACI) helpers.
+//! cncKad `AutoCAD` Color Index (ACI) helpers.
 
 use drawing_ir::{Color, StrokeStyle, Style};
 
@@ -50,22 +50,8 @@ impl EntityMeta {
       .split_whitespace()
       .filter_map(|token| token.parse::<f64>().ok())
       .collect::<Vec<_>>();
-    let layer_id = values.get(2).and_then(|value| {
-      let id = *value as i32;
-      if id > 0 {
-        Some(id)
-      } else {
-        None
-      }
-    });
-    let color_aci = values.get(4).and_then(|value| {
-      let aci = *value as u8;
-      if (1..=255).contains(&aci) {
-        Some(aci)
-      } else {
-        None
-      }
-    });
+    let layer_id = values.get(2).and_then(|value| f64_to_positive_i32(*value));
+    let color_aci = values.get(4).and_then(|value| f64_to_aci(*value));
     Self {
       layer_id,
       color_aci,
@@ -88,27 +74,31 @@ impl EntityMeta {
 /// Parses inline color from extended geometry lines (`cx cy r color ...`).
 #[must_use]
 pub fn inline_color(values: &[f64]) -> Option<u8> {
-  values.get(3).and_then(|value| {
-    let aci = *value as u8;
-    if (1..=255).contains(&aci) {
-      Some(aci)
-    } else {
-      None
-    }
-  })
+  values.get(3).and_then(|value| f64_to_aci(*value))
 }
 
 /// Parses inline layer id from extended geometry lines.
 #[must_use]
 pub fn inline_layer_id(values: &[f64]) -> Option<i32> {
-  values.get(5).and_then(|value| {
-    let id = *value as i32;
-    if id > 0 {
-      Some(id)
-    } else {
-      None
-    }
-  })
+  values.get(5).and_then(|value| f64_to_positive_i32(*value))
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn f64_to_aci(value: f64) -> Option<u8> {
+  if value.is_finite() && value.fract() == 0.0 && (1.0..=255.0).contains(&value) {
+    Some(value as u8)
+  } else {
+    None
+  }
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn f64_to_positive_i32(value: f64) -> Option<i32> {
+  if value.is_finite() && value.fract() == 0.0 && value > 0.0 && value <= f64::from(i32::MAX) {
+    Some(value as i32)
+  } else {
+    None
+  }
 }
 
 #[cfg(test)]

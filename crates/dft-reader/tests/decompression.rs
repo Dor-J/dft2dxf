@@ -1,3 +1,5 @@
+//! Decompression tests for embedded Solid Edge EMF streams.
+
 use dft2dxf_testkit::{
   build_minimal_dft, build_rectangle_emf, invalid_zlib_payload, MinimalDftSpec, SheetSpec,
 };

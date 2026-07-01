@@ -1,4 +1,11 @@
 //! Professional DXF writer for Drawing IR entities.
+#![allow(
+  clippy::assigning_clones,
+  clippy::cast_precision_loss,
+  clippy::field_reassign_with_default,
+  clippy::match_same_arms,
+  clippy::unnecessary_wraps
+)]
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -27,11 +34,19 @@ impl Default for DxfWriteOptions {
 }
 
 /// Writes a drawing IR document to a DXF file.
+///
+/// # Errors
+///
+/// Returns [`DxfError`] if the DXF file cannot be written.
 pub fn write_drawing_to_file(drawing: &mut Drawing, path: &Path) -> DxfResult<()> {
   write_drawing_to_file_with_options(drawing, path, DxfWriteOptions::default())
 }
 
 /// Writes a drawing IR document to a DXF file with explicit options.
+///
+/// # Errors
+///
+/// Returns [`DxfError`] if the DXF file cannot be written.
 pub fn write_drawing_to_file_with_options(
   drawing: &mut Drawing,
   path: &Path,

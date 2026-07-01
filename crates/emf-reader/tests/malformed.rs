@@ -1,3 +1,5 @@
+//! Malformed EMF parser and replay tests.
+
 use emf_reader::{EmfDocument, EmfError, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE};
 
 #[test]

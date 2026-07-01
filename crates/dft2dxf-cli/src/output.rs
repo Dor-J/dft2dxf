@@ -1,4 +1,10 @@
 //! CLI output formatting.
+#![allow(
+  clippy::format_collect,
+  clippy::format_push_string,
+  clippy::missing_errors_doc,
+  clippy::redundant_closure_for_method_calls
+)]
 
 use std::path::Path;
 

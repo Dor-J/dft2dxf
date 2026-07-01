@@ -16,6 +16,8 @@ use crate::record::{
 };
 
 /// Replays supported EMF records into a single drawing sheet.
+#[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn replay_to_drawing(
   emf: &EmfDocument,
   sheet_index: Option<u32>,
@@ -171,7 +173,7 @@ pub fn replay_to_drawing(
                 stroke: Some(stroke.clone()),
                 fill: None,
               },
-              provenance: provenance(record),
+              provenance: Some(provenance(record)),
             }),
             &stroke,
             record,
@@ -200,26 +202,50 @@ fn styled_entity(kind: EntityKind, stroke: &StrokeStyle, record: &EmfRecord) -> 
       fill: None,
     },
     kind,
-    provenance: provenance(record),
+    provenance: Some(provenance(record)),
   }
 }
 
-fn provenance(record: &EmfRecord) -> Option<SourceProvenance> {
-  Some(SourceProvenance {
+fn provenance(record: &EmfRecord) -> SourceProvenance {
+  SourceProvenance {
     emf_record_index: Some(record.index),
     emf_record_type: Some(record.record_type),
-  })
+  }
 }
 
 fn scale_point(point: Point, scale_x: f64, scale_y: f64) -> Point {
   Point::new(point.x * scale_x, point.y * scale_y)
 }
 
+fn read_u32(record: &EmfRecord, offset: usize) -> Option<u32> {
+  Some(u32::from_le_bytes(
+    record.data.get(offset..offset + 4)?.try_into().ok()?,
+  ))
+}
+
+fn read_i16_as_f64(record: &EmfRecord, offset: usize) -> Option<f64> {
+  Some(f64::from(i16::from_le_bytes(
+    record.data.get(offset..offset + 2)?.try_into().ok()?,
+  )))
+}
+
+fn read_i32_as_f64(record: &EmfRecord, offset: usize) -> Option<f64> {
+  Some(f64::from(i32::from_le_bytes(
+    record.data.get(offset..offset + 4)?.try_into().ok()?,
+  )))
+}
+
+fn read_f32_as_f64(record: &EmfRecord, offset: usize) -> Option<f64> {
+  Some(f64::from(f32::from_le_bytes(
+    record.data.get(offset..offset + 4)?.try_into().ok()?,
+  )))
+}
+
 fn parse_mapping_scale(record: &EmfRecord) -> Option<(f64, f64)> {
   if record.data.len() < 12 {
     return None;
   }
-  let mode = u32::from_le_bytes(record.data[8..12].try_into().ok()?);
+  let mode = read_u32(record, 8)?;
   if mode == 8 {
     return Some((0.0254, 0.0254));
   }
@@ -230,8 +256,8 @@ fn parse_world_transform_scale(record: &EmfRecord) -> Option<(f64, f64)> {
   if record.data.len() < 40 {
     return None;
   }
-  let m11 = f32::from_le_bytes(record.data[8..12].try_into().ok()?) as f64;
-  let m22 = f32::from_le_bytes(record.data[20..24].try_into().ok()?) as f64;
+  let m11 = read_f32_as_f64(record, 8)?;
+  let m22 = read_f32_as_f64(record, 20)?;
   Some((m11.abs().max(1e-9), m22.abs().max(1e-9)))
 }
 
@@ -239,9 +265,9 @@ fn parse_create_pen(record: &EmfRecord) -> Option<(u32, StrokeStyle)> {
   if record.data.len() < 28 {
     return None;
   }
-  let index = u32::from_le_bytes(record.data[4..8].try_into().ok()?);
-  let color = u32::from_le_bytes(record.data[12..16].try_into().ok()?);
-  let width = i32::from_le_bytes(record.data[16..20].try_into().ok()?) as f64;
+  let index = read_u32(record, 4)?;
+  let color = read_u32(record, 12)?;
+  let width = read_i32_as_f64(record, 16)?;
   Some((index, stroke_from_color_ref(color, width.max(1.0))))
 }
 
@@ -249,9 +275,9 @@ fn parse_ext_create_pen(record: &EmfRecord) -> Option<(u32, StrokeStyle)> {
   if record.data.len() < 32 {
     return None;
   }
-  let index = u32::from_le_bytes(record.data[8..12].try_into().ok()?);
-  let width = u32::from_le_bytes(record.data[16..20].try_into().ok()?) as f64;
-  let color = u32::from_le_bytes(record.data[24..28].try_into().ok()?);
+  let index = read_u32(record, 8)?;
+  let width = f64::from(read_u32(record, 16)?);
+  let color = read_u32(record, 24)?;
   Some((index, stroke_from_color_ref(color, width.max(1.0))))
 }
 
@@ -259,16 +285,16 @@ fn parse_ext_create_font(record: &EmfRecord) -> Option<(u32, f64)> {
   if record.data.len() < 20 {
     return None;
   }
-  let index = u32::from_le_bytes(record.data[8..12].try_into().ok()?);
+  let index = read_u32(record, 8)?;
   let height = i32::from_le_bytes(record.data[12..16].try_into().ok()?);
-  Some((index, height.unsigned_abs() as f64))
+  Some((index, f64::from(height.unsigned_abs())))
 }
 
 fn parse_select_object(record: &EmfRecord) -> Option<u32> {
   if record.data.len() < 12 {
     return None;
   }
-  Some(u32::from_le_bytes(record.data[8..12].try_into().ok()?))
+  read_u32(record, 8)
 }
 
 fn stroke_from_color_ref(color_ref: u32, width: f64) -> StrokeStyle {
@@ -286,8 +312,8 @@ fn parse_point_record(record: &EmfRecord, scale_x: f64, scale_y: f64) -> Option<
   if record.data.len() < 16 {
     return None;
   }
-  let x = i32::from_le_bytes(record.data[8..12].try_into().ok()?) as f64;
-  let y = i32::from_le_bytes(record.data[12..16].try_into().ok()?) as f64;
+  let x = read_i32_as_f64(record, 8)?;
+  let y = read_i32_as_f64(record, 12)?;
   Some(scale_point(Point::new(x, y), scale_x, scale_y))
 }
 
@@ -295,10 +321,10 @@ fn parse_rectangle(record: &EmfRecord, scale_x: f64, scale_y: f64) -> Option<(Po
   if record.data.len() < 24 {
     return None;
   }
-  let left = i32::from_le_bytes(record.data[8..12].try_into().ok()?) as f64;
-  let top = i32::from_le_bytes(record.data[12..16].try_into().ok()?) as f64;
-  let right = i32::from_le_bytes(record.data[16..20].try_into().ok()?) as f64;
-  let bottom = i32::from_le_bytes(record.data[20..24].try_into().ok()?) as f64;
+  let left = read_i32_as_f64(record, 8)?;
+  let top = read_i32_as_f64(record, 12)?;
+  let right = read_i32_as_f64(record, 16)?;
+  let bottom = read_i32_as_f64(record, 20)?;
   Some((
     scale_point(Point::new(left, top), scale_x, scale_y),
     scale_point(Point::new(right, bottom), scale_x, scale_y),
@@ -322,13 +348,13 @@ fn parse_poly(record: &EmfRecord, scale_x: f64, scale_y: f64) -> Option<Vec<Poin
   let mut offset = start;
   for _ in 0..count {
     if is_16 {
-      let x = i16::from_le_bytes(record.data[offset..offset + 2].try_into().ok()?) as f64;
-      let y = i16::from_le_bytes(record.data[offset + 2..offset + 4].try_into().ok()?) as f64;
+      let x = read_i16_as_f64(record, offset)?;
+      let y = read_i16_as_f64(record, offset + 2)?;
       points.push(scale_point(Point::new(x, y), scale_x, scale_y));
       offset += 4;
     } else {
-      let x = i32::from_le_bytes(record.data[offset..offset + 4].try_into().ok()?) as f64;
-      let y = i32::from_le_bytes(record.data[offset + 4..offset + 8].try_into().ok()?) as f64;
+      let x = read_i32_as_f64(record, offset)?;
+      let y = read_i32_as_f64(record, offset + 4)?;
       points.push(scale_point(Point::new(x, y), scale_x, scale_y));
       offset += 8;
     }
@@ -355,14 +381,14 @@ fn parse_arc(record: &EmfRecord, scale_x: f64, scale_y: f64) -> Option<ArcSegmen
   if record.data.len() < 40 {
     return None;
   }
-  let left = i32::from_le_bytes(record.data[8..12].try_into().ok()?) as f64;
-  let top = i32::from_le_bytes(record.data[12..16].try_into().ok()?) as f64;
-  let right = i32::from_le_bytes(record.data[16..20].try_into().ok()?) as f64;
-  let bottom = i32::from_le_bytes(record.data[20..24].try_into().ok()?) as f64;
-  let start_x = i32::from_le_bytes(record.data[24..28].try_into().ok()?) as f64;
-  let start_y = i32::from_le_bytes(record.data[28..32].try_into().ok()?) as f64;
-  let end_x = i32::from_le_bytes(record.data[32..36].try_into().ok()?) as f64;
-  let end_y = i32::from_le_bytes(record.data[36..40].try_into().ok()?) as f64;
+  let left = read_i32_as_f64(record, 8)?;
+  let top = read_i32_as_f64(record, 12)?;
+  let right = read_i32_as_f64(record, 16)?;
+  let bottom = read_i32_as_f64(record, 20)?;
+  let start_x = read_i32_as_f64(record, 24)?;
+  let start_y = read_i32_as_f64(record, 28)?;
+  let end_x = read_i32_as_f64(record, 32)?;
+  let end_y = read_i32_as_f64(record, 36)?;
 
   let center = scale_point(
     Point::new((left + right) * 0.5, (top + bottom) * 0.5),
@@ -390,10 +416,10 @@ fn parse_ellipse(record: &EmfRecord, scale_x: f64, scale_y: f64) -> Option<(Poin
   if record.data.len() < 24 {
     return None;
   }
-  let left = i32::from_le_bytes(record.data[8..12].try_into().ok()?) as f64;
-  let top = i32::from_le_bytes(record.data[12..16].try_into().ok()?) as f64;
-  let right = i32::from_le_bytes(record.data[16..20].try_into().ok()?) as f64;
-  let bottom = i32::from_le_bytes(record.data[20..24].try_into().ok()?) as f64;
+  let left = read_i32_as_f64(record, 8)?;
+  let top = read_i32_as_f64(record, 12)?;
+  let right = read_i32_as_f64(record, 16)?;
+  let bottom = read_i32_as_f64(record, 20)?;
   let center = scale_point(
     Point::new((left + right) * 0.5, (top + bottom) * 0.5),
     scale_x,
@@ -408,8 +434,8 @@ fn parse_text_record(record: &EmfRecord, scale_x: f64, scale_y: f64) -> Option<(
   if record.data.len() < 24 {
     return None;
   }
-  let x = i32::from_le_bytes(record.data[8..12].try_into().ok()?) as f64;
-  let y = i32::from_le_bytes(record.data[12..16].try_into().ok()?) as f64;
+  let x = read_i32_as_f64(record, 8)?;
+  let y = read_i32_as_f64(record, 12)?;
   let string_bytes = record.data.get(24..)?;
   let text = if record.record_type == EMR_EXTTEXTOUTW {
     decode_utf16_le(string_bytes).unwrap_or_default()

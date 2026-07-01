@@ -20,8 +20,10 @@ pub fn parse_part_section(lines: &[String]) -> (Option<String>, Option<String>) 
 pub fn parse_sheet_section(
   lines: &[String],
 ) -> CkadResult<(Option<f64>, Option<f64>, DrawingMetadata)> {
-  let mut metadata = DrawingMetadata::default();
-  metadata.units = PaperUnit::Millimeters;
+  let mut metadata = DrawingMetadata {
+    units: PaperUnit::Millimeters,
+    ..Default::default()
+  };
   let mut width = None;
   let mut height = None;
 
@@ -40,8 +42,8 @@ pub fn parse_sheet_section(
       }
     } else if let Some(rest) = trimmed.strip_prefix("/M ") {
       let values = parse_floats(rest)?;
-      if !values.is_empty() {
-        metadata.material = Some(format!("M{}", values[0] as i32));
+      if let Some(material_id) = values.first().and_then(|value| f64_to_i32(*value)) {
+        metadata.material = Some(format!("M{material_id}"));
       }
     }
   }
@@ -93,6 +95,19 @@ fn parse_floats(line: &str) -> CkadResult<Vec<f64>> {
         })
     })
     .collect()
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn f64_to_i32(value: f64) -> Option<i32> {
+  if value.is_finite()
+    && value.fract() == 0.0
+    && value >= f64::from(i32::MIN)
+    && value <= f64::from(i32::MAX)
+  {
+    Some(value as i32)
+  } else {
+    None
+  }
 }
 
 #[cfg(test)]

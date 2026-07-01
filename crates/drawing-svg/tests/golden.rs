@@ -1,3 +1,5 @@
+//! Golden tests for SVG output.
+
 use std::path::PathBuf;
 
 mod fixtures;

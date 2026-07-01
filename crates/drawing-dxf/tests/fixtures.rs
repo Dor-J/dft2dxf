@@ -6,6 +6,8 @@ use drawing_ir::{
 };
 
 /// Drawing with one of each major entity kind.
+#[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn multi_entity_drawing() -> drawing_ir::Drawing {
   let mut drawing = drawing_ir::Drawing::new();
   drawing.sheets.push(Sheet {

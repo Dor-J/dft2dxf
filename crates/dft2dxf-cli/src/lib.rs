@@ -1,6 +1,13 @@
 //! `dft2dxf` library — CLI logic and helpers.
 
 #![forbid(unsafe_code)]
+#![allow(
+  clippy::items_after_statements,
+  clippy::match_same_arms,
+  clippy::missing_errors_doc,
+  clippy::ptr_arg,
+  clippy::too_many_arguments
+)]
 
 pub mod output;
 
@@ -25,6 +32,7 @@ use tracing_subscriber::EnvFilter;
                 to DXF/SVG."
 )]
 pub struct Cli {
+  /// Command to execute.
   #[command(subcommand)]
   pub command: Option<Commands>,
 
@@ -337,7 +345,7 @@ fn cmd_convert_solid_edge(
   let mut document =
     DftDocument::open_with_options(input, &DftOpenOptions::new().with_limits(limits))?;
   let sheets = document.sheets().context("failed to read sheets")?;
-  let index = sheet.unwrap_or_else(|| sheets.first().map(|s| s.index).unwrap_or(1));
+  let index = sheet.unwrap_or_else(|| sheets.first().map_or(1, |s| s.index));
   let sheet_meta = document.sheet(index).context("sheet lookup failed")?;
   let emf = document
     .extract_emf(index)
@@ -499,11 +507,7 @@ fn load_drawing_for_summary(input: &Path, limits: Limits) -> Result<drawing_ir::
     DftContainerFormat::SolidEdgeCompound => {
       let mut document =
         DftDocument::open_with_options(input, &DftOpenOptions::new().with_limits(limits))?;
-      let index = document
-        .sheets()?
-        .first()
-        .map(|sheet| sheet.index)
-        .unwrap_or(1);
+      let index = document.sheets()?.first().map_or(1, |sheet| sheet.index);
       let sheet_meta = document.sheet(index)?;
       let emf = document.extract_emf(index)?;
       let emf_doc = emf_reader::EmfDocument::parse(

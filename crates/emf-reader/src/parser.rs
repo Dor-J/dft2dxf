@@ -1,7 +1,7 @@
 //! Strict EMF record iterator.
 
 use crate::error::{EmfError, EmfResult};
-use crate::record::EMR_EOF;
+use crate::record::{EMR_EOF, EMR_HEADER};
 
 /// Maximum records to parse from one EMF by default.
 pub const DEFAULT_MAX_RECORD_COUNT: u32 = 1_000_000;
@@ -42,11 +42,11 @@ impl EmfRecord {
   #[must_use]
   pub fn class(&self) -> RecordClass {
     match self.record_type {
-      1 | 14 | 17 | 35 | 36 | 37 | 38 | 82 | 95 => RecordClass::Control,
+      EMR_EOF => RecordClass::Eof,
+      EMR_HEADER | 17 | 35 | 36 | 37 | 38 | 82 | 95 => RecordClass::Control,
       4 | 5 | 27 | 42 | 45 | 46 | 47 | 49 | 54 | 55 | 83 | 84 | 86 | 87 | 88 => {
         RecordClass::Drawing
       }
-      EMR_EOF => RecordClass::Eof,
       _ => RecordClass::Unsupported,
     }
   }
@@ -61,6 +61,10 @@ pub struct EmfDocument {
 
 impl EmfDocument {
   /// Parses EMF bytes into records with limits.
+  ///
+  /// # Errors
+  ///
+  /// Returns [`EmfError`] if the EMF is malformed, omits EOF, or exceeds configured limits.
   pub fn parse(data: &[u8], max_records: u32, max_record_size: u32) -> EmfResult<Self> {
     if data.len() < 8 {
       return Err(EmfError::invalid("header", "EMF too short"));
@@ -75,8 +79,8 @@ impl EmfDocument {
       if index >= max_records {
         return Err(EmfError::limit(
           "max_record_count",
-          max_records as u64,
-          index as u64,
+          u64::from(max_records),
+          u64::from(index),
         ));
       }
 
@@ -87,8 +91,8 @@ impl EmfDocument {
         ));
       }
 
-      let record_type = u32::from_le_bytes(data[offset..offset + 4].try_into().unwrap());
-      let size = u32::from_le_bytes(data[offset + 4..offset + 8].try_into().unwrap());
+      let record_type = read_u32_le(data, offset);
+      let size = read_u32_le(data, offset + 4);
 
       if size < 8 || size % 4 != 0 {
         return Err(EmfError::invalid(
@@ -99,8 +103,8 @@ impl EmfDocument {
       if size > max_record_size {
         return Err(EmfError::limit(
           "max_record_size",
-          max_record_size as u64,
-          size as u64,
+          u64::from(max_record_size),
+          u64::from(size),
         ));
       }
 
@@ -142,4 +146,13 @@ impl EmfDocument {
 
     Ok(Self { records })
   }
+}
+
+fn read_u32_le(data: &[u8], offset: usize) -> u32 {
+  u32::from_le_bytes([
+    data[offset],
+    data[offset + 1],
+    data[offset + 2],
+    data[offset + 3],
+  ])
 }

@@ -18,6 +18,10 @@ use crate::error::SvgResult;
 const VIEWBOX_PADDING: f64 = 5.0;
 
 /// Serializes a drawing to a deterministic SVG string.
+///
+/// # Errors
+///
+/// Returns an SVG writer error if serialization fails.
 pub fn write_drawing_to_string(drawing: &drawing_ir::Drawing) -> SvgResult<String> {
   let bounds = compute_drawing_bounds(drawing);
   let (view_box, flip_offset) = view_box_and_flip(&bounds);
@@ -44,6 +48,11 @@ pub fn write_drawing_to_string(drawing: &drawing_ir::Drawing) -> SvgResult<Strin
 }
 
 /// Writes a drawing to a file path.
+///
+/// # Errors
+///
+/// Returns an error if the parent directory or output file cannot be created or written, or if
+/// SVG serialization fails.
 pub fn write_drawing_to_file(drawing: &drawing_ir::Drawing, path: &FsPath) -> SvgResult<()> {
   if let Some(parent) = path.parent() {
     if !parent.as_os_str().is_empty() {
@@ -133,10 +142,10 @@ fn view_box_and_flip(bounds: &BoundingBox) -> (String, f64) {
   (format!("{min_x} {min_y} {width} {height}"), flip_offset)
 }
 
-fn group_entities_by_layer<'a>(
-  entities: &'a [drawing_ir::Entity],
+fn group_entities_by_layer(
+  entities: &[drawing_ir::Entity],
   _flip_offset: f64,
-) -> BTreeMap<String, Vec<&'a drawing_ir::Entity>> {
+) -> BTreeMap<String, Vec<&drawing_ir::Entity>> {
   let mut grouped: BTreeMap<String, Vec<&drawing_ir::Entity>> = BTreeMap::new();
   for entity in entities {
     let layer = entity.layer.as_deref().unwrap_or("0").to_string();
@@ -149,24 +158,22 @@ fn flip_y(point: Point, flip_offset: f64) -> Point {
   Point::new(point.x, flip_offset - point.y)
 }
 
+#[allow(clippy::too_many_lines)]
 fn render_entity(entity: &drawing_ir::Entity, flip_offset: f64) -> Group {
-  let stroke = entity
-    .style
-    .stroke
-    .as_ref()
-    .map(|value| {
+  let stroke = entity.style.stroke.as_ref().map_or_else(
+    || "#000000".to_string(),
+    |value| {
       format!(
         "#{:02x}{:02x}{:02x}",
         value.color.r, value.color.g, value.color.b
       )
-    })
-    .unwrap_or_else(|| "#000000".to_string());
+    },
+  );
   let stroke_width = entity
     .style
     .stroke
     .as_ref()
-    .map(|value| value.width)
-    .unwrap_or(1.0);
+    .map_or(1.0, |value| value.width);
 
   match &entity.kind {
     EntityKind::Line { from, to } => {
@@ -249,12 +256,8 @@ fn render_entity(entity: &drawing_ir::Entity, flip_offset: f64) -> Group {
       let start = flip_y(arc.point_at_angle(arc.start_angle), flip_offset);
       let end = flip_y(arc.point_at_angle(arc.end_angle), flip_offset);
       let sweep = arc.end_angle - arc.start_angle;
-      let large_arc = if sweep.abs() > std::f64::consts::PI {
-        1
-      } else {
-        0
-      };
-      let sweep_flag = if sweep >= 0.0 { 1 } else { 0 };
+      let large_arc = i32::from(sweep.abs() > std::f64::consts::PI);
+      let sweep_flag = i32::from(sweep >= 0.0);
       Group::new().add(
         SvgPath::new()
           .set(
