@@ -1,66 +1,97 @@
-//! Smoke test for a committed real Solid Edge `.dft` fixture.
+//! Smoke tests for real Solid Edge `.dft` fixtures.
 //!
-//! The test is a no-op when `tests/fixtures/valid/real-solid-edge.dft` is absent.
-//! See `tests/fixtures/valid/INTAKE.md` for acquisition and provenance requirements.
+//! Default fixture directory: `tests/fixtures/valid/` (redistributable samples only).
+//!
+//! Local proprietary fixtures: `tests/fixtures/valid/local/` (gitignored). Enable with:
+//!
+//! ```bash
+//! cargo test -p dft-reader opens_and_extracts_emf_from_real_solid_edge_dft_fixture -- --local
+//! # or
+//! DFT2DXF_LOCAL=1 cargo test -p dft-reader opens_and_extracts_emf_from_real_solid_edge_dft_fixture
+//! ```
+//!
+//! See `tests/fixtures/valid/INTAKE.md`.
 
-use std::path::PathBuf;
+use std::path::Path;
 
-use dft2dxf_testkit::is_emf;
+use dft2dxf_testkit::{discover_valid_dft_fixtures, is_emf, use_local_fixtures};
 use dft_reader::{DftDocument, DftOpenOptions, Limits};
-
-/// Canonical path for the first real Solid Edge draft fixture.
-pub fn real_solid_edge_dft_fixture_path() -> PathBuf {
-  PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/valid/real-solid-edge.dft")
-}
 
 /// Minimum decompressed EMF payload size (one `EMR_HEADER` record).
 const MIN_EXTRACTED_EMF_BYTES: usize = 88;
 
 #[test]
 fn opens_and_extracts_emf_from_real_solid_edge_dft_fixture() {
-  let path = real_solid_edge_dft_fixture_path();
-  if !path.exists() {
+  let use_local = use_local_fixtures();
+  let fixtures = discover_valid_dft_fixtures(use_local);
+  if fixtures.is_empty() {
+    let mode = if use_local { "local" } else { "valid" };
     eprintln!(
-      "SKIP: real Solid Edge DFT fixture not present at {}",
-      path.display()
+      "SKIP: no .dft files in tests/fixtures/valid/{suffix}",
+      suffix = if use_local { "local/" } else { "" }
     );
-    eprintln!("Add a redistributable file per tests/fixtures/valid/INTAKE.md to enable M1.");
+    if use_local {
+      eprintln!("Add customer .dft files under tests/fixtures/valid/local/ (gitignored).");
+    } else {
+      eprintln!(
+        "Add a redistributable .dft under tests/fixtures/valid/ or run with --local / DFT2DXF_LOCAL=1."
+      );
+      eprintln!("See tests/fixtures/valid/INTAKE.md");
+    }
+    eprintln!("Fixture mode requested: {mode}");
     return;
   }
 
-  let mut document =
-    DftDocument::open_with_options(&path, DftOpenOptions::new().with_limits(Limits::strict()))
-      .expect("real DFT should open as compound file");
+  for path in fixtures {
+    assert_extracts_emf_from_dft(&path);
+  }
+}
 
-  let report = document.inspect().expect("inspect should succeed");
+fn assert_extracts_emf_from_dft(path: &Path) {
+  let mut document =
+    DftDocument::open_with_options(path, DftOpenOptions::new().with_limits(Limits::strict()))
+      .unwrap_or_else(|err| panic!("{} should open as compound file: {err}", path.display()));
+
+  let report = document
+    .inspect()
+    .unwrap_or_else(|err| panic!("{} inspect failed: {err}", path.display()));
   assert!(
     report.storage.has_viewer_info,
-    "expected JDraftViewerInfo storage in real fixture"
+    "{}: expected JDraftViewerInfo storage",
+    path.display()
   );
   assert!(
     report.storage.has_document_info,
-    "expected JDraftDocumentInfo stream in real fixture"
+    "{}: expected JDraftDocumentInfo stream",
+    path.display()
   );
 
-  let sheets = document.sheets().expect("sheet metadata should parse");
-  assert!(!sheets.is_empty(), "expected at least one sheet");
+  let sheets = document
+    .sheets()
+    .unwrap_or_else(|err| panic!("{} sheet metadata failed: {err}", path.display()));
+  assert!(
+    !sheets.is_empty(),
+    "{}: expected at least one sheet",
+    path.display()
+  );
 
   let extracted = document
     .extract_emf(1)
-    .expect("sheet 1 EMF extraction should succeed");
+    .unwrap_or_else(|err| panic!("{} sheet 1 EMF extraction failed: {err}", path.display()));
 
   assert!(
     !extracted.data.is_empty(),
-    "extracted EMF must be non-empty"
+    "{}: extracted EMF must be non-empty",
+    path.display()
   );
   assert!(
     extracted.data.len() >= MIN_EXTRACTED_EMF_BYTES,
-    "extracted EMF smaller than minimum header size ({MIN_EXTRACTED_EMF_BYTES} bytes)"
+    "{}: extracted EMF smaller than minimum header size ({MIN_EXTRACTED_EMF_BYTES} bytes)",
+    path.display()
   );
   assert!(
     is_emf(&extracted.data),
-    "extracted bytes must have EMF signature"
+    "{}: extracted bytes must have EMF signature",
+    path.display()
   );
-
-  // `extract_emf` already runs `validate_emf_header`; reaching here implies it passed.
 }

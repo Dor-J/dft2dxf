@@ -52,7 +52,7 @@ fn parses_valid_metadata_from_synthetic_dft() {
   dft2dxf_testkit::build_minimal_dft(&path, &dft2dxf_testkit::MinimalDftSpec::one_sheet("A", emf))
     .unwrap();
 
-  let mut compound = cfb::CompoundFile::open(&path).unwrap();
+  let mut compound = cfb::open(&path).unwrap();
   let mut stream = compound
     .open_stream("JDraftViewerInfo/JDraftDocumentInfo")
     .unwrap();

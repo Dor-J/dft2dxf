@@ -7,8 +7,6 @@ use cfb::CompoundFile;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 
-use crate::emf_fixture;
-
 /// One sheet in a synthetic DFT.
 #[derive(Debug, Clone)]
 pub struct SheetSpec {

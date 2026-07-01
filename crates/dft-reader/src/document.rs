@@ -7,11 +7,13 @@ use serde::Serialize;
 
 use crate::error::{DftError, DftResult};
 use crate::limits::Limits;
-use crate::metadata::{DraftDocumentInfo, StorageTree};
+use crate::metadata::{
+  DraftDocumentInfo, StorageTree, STORAGE_J_DRAFT_VIEWER_INFO, STREAM_J_DRAFT_DOCUMENT_INFO,
+};
 use crate::sheet::{ExtractedEmf, Sheet};
 use crate::storage::{
   build_storage_tree, extract_sheet_emf, open_compound_file, parse_draft_metadata,
-  read_stream_limited, ParsedDraft, STORAGE_J_DRAFT_VIEWER_INFO, STREAM_J_DRAFT_DOCUMENT_INFO,
+  read_stream_limited, ParsedDraft,
 };
 
 /// Options used when opening a `.dft` file.
@@ -105,13 +107,16 @@ impl DftDocument {
 
   /// Builds an inspection report without extracting EMF payloads.
   pub fn inspect(&mut self) -> DftResult<InspectReport> {
+    let path = self.path.clone();
     let storage = build_storage_tree(&mut self.compound, &self.limits)?;
     let parsed = self.load_parsed().ok();
     Ok(InspectReport {
-      path: self.path.clone(),
+      path,
       storage,
       document_info: parsed.as_ref().map(|value| value.document_info.clone()),
-      sheets: parsed.map(|value| value.sheets).unwrap_or_default(),
+      sheets: parsed
+        .map(|value| value.sheets.clone())
+        .unwrap_or_default(),
     })
   }
 

@@ -32,12 +32,17 @@ pub(crate) fn open_compound_file(
       file_size,
     ));
   }
-  CompoundFile::open(path).map_err(|err| match err {
-    cfb::Error::InvalidMagic { .. } => DftError::NotCompoundFile {
-      message: "invalid compound file header".to_string(),
-    },
-    other => DftError::CompoundFile(other),
-  })
+  cfb::open(path).map_err(map_compound_open_error)
+}
+
+fn map_compound_open_error(err: std::io::Error) -> DftError {
+  if err.kind() == std::io::ErrorKind::InvalidData {
+    DftError::NotCompoundFile {
+      message: err.to_string(),
+    }
+  } else {
+    DftError::CompoundFile(err)
+  }
 }
 
 /// Reads an entire stream with size limits.

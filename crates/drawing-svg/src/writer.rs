@@ -1,12 +1,12 @@
 //! SVG writer implementation.
 
 use std::io::Write;
-use std::path::Path;
+use std::path::Path as FsPath;
 
 use drawing_ir::{EntityKind, PathSegment, Point};
 use svg::node::element::path::Data;
-use svg::node::element::{Group, Line, Path, Polygon, Polyline, Text};
-use svg::node::Text as TextNode;
+use svg::node::element::{Group, Line, Path as SvgPath, Polygon, Polyline, Text as SvgText};
+use svg::node::{Text as TextNode, Value};
 use svg::Document;
 
 use crate::error::SvgResult;
@@ -28,7 +28,7 @@ pub fn write_drawing_to_string(drawing: &drawing_ir::Drawing) -> SvgResult<Strin
 }
 
 /// Writes a drawing to a file path.
-pub fn write_drawing_to_file(drawing: &drawing_ir::Drawing, path: &Path) -> SvgResult<()> {
+pub fn write_drawing_to_file(drawing: &drawing_ir::Drawing, path: &FsPath) -> SvgResult<()> {
   if let Some(parent) = path.parent() {
     if !parent.as_os_str().is_empty() {
       std::fs::create_dir_all(parent)?;
@@ -96,7 +96,7 @@ fn render_entity(entity: &drawing_ir::Entity) -> svg::node::element::Group {
       }
     }
     EntityKind::Path(path) => Group::new().add(
-      Path::new()
+      SvgPath::new()
         .set("d", path_data(path))
         .set("stroke", stroke)
         .set("stroke-width", fmt(stroke_width))
@@ -106,7 +106,7 @@ fn render_entity(entity: &drawing_ir::Entity) -> svg::node::element::Group {
       top_left,
       bottom_right,
     } => Group::new().add(
-      Path::new()
+      SvgPath::new()
         .set(
           "d",
           format!(
@@ -126,7 +126,7 @@ fn render_entity(entity: &drawing_ir::Entity) -> svg::node::element::Group {
         .set("fill", "none"),
     ),
     EntityKind::Text(text) => Group::new().add(
-      Text::new()
+      SvgText::new("")
         .set("x", fmt(text.position.x))
         .set("y", fmt(text.position.y))
         .set("fill", stroke)
@@ -154,7 +154,7 @@ fn path_data(path: &drawing_ir::Path) -> String {
       }
     }
   }
-  data.to_string()
+  Value::from(data).to_string()
 }
 
 fn fmt(value: f64) -> String {

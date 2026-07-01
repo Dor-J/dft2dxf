@@ -84,7 +84,7 @@ pub enum DftError {
 
   /// Low-level CFB error.
   #[error("compound file error: {0}")]
-  CompoundFile(#[from] cfb::Error),
+  CompoundFile(#[from] std::io::Error),
 }
 
 impl DftError {

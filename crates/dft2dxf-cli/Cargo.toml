@@ -15,7 +15,9 @@ path = "src/main.rs"
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true }
+ckad-reader = { workspace = true }
 dft-reader = { workspace = true }
+dft2dxf-testkit = { workspace = true }
 drawing-dxf = { workspace = true }
 drawing-ir = { workspace = true }
 drawing-svg = { workspace = true }

@@ -61,6 +61,33 @@ pub fn render_extract(paths: &[impl AsRef<Path>], format: OutputFormat) -> anyho
   Ok(())
 }
 
+/// Renders cncKad inspect output.
+pub fn render_cnckad_inspect(
+  path: &Path,
+  drawing: &drawing_ir::Drawing,
+  format: OutputFormat,
+) -> anyhow::Result<()> {
+  match format {
+    OutputFormat::Human => {
+      println!("File: {}", path.display());
+      println!("Format: cncKad text");
+      for sheet in &drawing.sheets {
+        println!(
+          "Sheet: {} entities={} size={:?}x{:?}",
+          sheet.name.as_deref().unwrap_or("(unnamed)"),
+          sheet.entities.len(),
+          sheet.width,
+          sheet.height
+        );
+      }
+    }
+    OutputFormat::Json => {
+      println!("{}", serde_json::to_string_pretty(drawing)?);
+    }
+  }
+  Ok(())
+}
+
 /// Renders validate output.
 pub fn render_validate(sheet_count: usize, format: OutputFormat) -> anyhow::Result<()> {
   match format {

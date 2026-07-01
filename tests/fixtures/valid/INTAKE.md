@@ -10,6 +10,38 @@ tests/fixtures/valid/real-solid-edge.dft
 When that file exists, `crates/dft-reader/tests/real_fixture.rs` runs extraction smoke
 assertions in CI. When absent, the test prints a skip message and returns (CI stays green).
 
+## Local proprietary fixtures (gitignored)
+
+Place customer or private `.dft` files under:
+
+```text
+tests/fixtures/valid/local/
+```
+
+This directory is listed in `.gitignore` and must **never** be committed.
+
+Supported local formats:
+
+- **Metalix cncKad** text `.dft` (header `gKad` / `CKad`) — geometry from section `[300]`
+- **Solid Edge** compound `.dft` (OLE header `D0 CF 11 E0 …`) — EMF extraction path
+
+Run extraction smoke tests against local files:
+
+```bash
+cargo test -p dft-reader opens_and_extracts_emf_from_real_solid_edge_dft_fixture -- --local
+# or
+DFT2DXF_LOCAL=1 cargo test -p dft-reader opens_and_extracts_emf_from_real_solid_edge_dft_fixture
+```
+
+CLI batch validation:
+
+```bash
+dft2dxf validate-fixtures --local
+```
+
+Default (without `--local` / `-l`) uses only `tests/fixtures/valid/` (non-recursive; excludes
+`local/`).
+
 ## Do not commit
 
 - Customer or proprietary drawings without written redistribution permission

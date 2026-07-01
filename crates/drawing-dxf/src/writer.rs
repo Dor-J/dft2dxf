@@ -3,8 +3,8 @@
 use std::path::Path;
 
 use drawing_ir::{Diagnostic, EntityKind};
-use dxf::entities::*;
-use dxf::{Drawing, Entity, EntityType, Point as DxfPoint};
+use dxf::entities::{Entity, EntityType, Line, LwPolyline, Text};
+use dxf::{Drawing, LwPolylineVertex, Point as DxfPoint};
 
 use crate::error::{DxfError, DxfResult};
 
@@ -14,20 +14,25 @@ use crate::error::{DxfError, DxfResult};
 /// partial arc to a full `CIRCLE` would change geometry.
 pub fn write_drawing_to_file(drawing: &mut drawing_ir::Drawing, path: &Path) -> DxfResult<()> {
   let mut dxf = Drawing::new();
+  let mut arc_omissions = 0u32;
 
   for sheet in &drawing.sheets {
     for entity in &sheet.entities {
       if matches!(entity.kind, EntityKind::Arc(_)) {
-        drawing.push_diagnostic(Diagnostic::unsupported_dxf_entity(
-          "Arc",
-          "DXF ARC export is not implemented; entity omitted (no CIRCLE substitution)",
-        ));
+        arc_omissions += 1;
         continue;
       }
       if let Some(dxf_entity) = map_entity(entity) {
         dxf.add_entity(dxf_entity);
       }
     }
+  }
+
+  for _ in 0..arc_omissions {
+    drawing.push_diagnostic(Diagnostic::unsupported_dxf_entity(
+      "Arc",
+      "DXF ARC export is not implemented; entity omitted (no CIRCLE substitution)",
+    ));
   }
 
   dxf
@@ -58,7 +63,7 @@ fn map_entity(entity: &drawing_ir::Entity) -> Option<Entity> {
           ..Default::default()
         })
         .collect();
-      lw.is_closed = polyline.closed;
+      lw.set_is_closed(polyline.closed);
       EntityType::LwPolyline(lw)
     }
     drawing_ir::EntityKind::Rectangle {
@@ -88,7 +93,7 @@ fn map_entity(entity: &drawing_ir::Entity) -> Option<Entity> {
           ..Default::default()
         },
       ];
-      lw.is_closed = true;
+      lw.set_is_closed(true);
       EntityType::LwPolyline(lw)
     }
     drawing_ir::EntityKind::Text(text) => {

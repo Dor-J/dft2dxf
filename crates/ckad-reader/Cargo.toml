@@ -1,0 +1,20 @@
+[package]
+name = "ckad-reader"
+description = "Read Metalix cncKad text .dft sheet-metal drawings into Drawing IR"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+drawing-ir = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+dft2dxf-testkit = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

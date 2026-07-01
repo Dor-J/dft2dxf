@@ -37,7 +37,7 @@ pub fn build_rectangle_emf(left: i32, top: i32, right: i32, bottom: i32) -> Vec<
   data.extend_from_slice(&bottom.to_le_bytes());
 
   append_record_header(&mut data, EMR_EOF, eof_size);
-  data.extend_from_slice(&[0u8; eof_size as usize - 8]);
+  data.extend_from_slice(&vec![0u8; (eof_size as usize).saturating_sub(8)]);
   data
 }
 

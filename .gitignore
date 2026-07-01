@@ -6,6 +6,8 @@
 
 # Project inputs/outputs (proprietary or generated)
 *.dft
+*.ANC
+*.Anf
 !tests/fixtures/**/*.dft
 *.emf
 *.dxf
@@ -15,6 +17,7 @@
 /*.svg
 /debug/**/*.svg
 /preview/**/*.svg
+/tests/fixtures/valid/local/*
 
 # Golden / snapshot tooling
 *.snap.new
