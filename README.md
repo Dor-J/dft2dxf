@@ -1,16 +1,23 @@
 # dft2dxf
 
-Convert Solid Edge `.dft` draft files into portable vector outputs by extracting the
-embedded viewer EMF representation and replaying it into a canonical drawing IR.
+Convert `.dft` draft files into portable **DXF** and **SVG** outputs.
 
-## What this project does
+The tool auto-detects the input format and routes to the appropriate parser:
 
-- Opens `.dft` files as cross-platform Compound File Binary containers
-- Inspects storage structure and draft viewer metadata
-- Safely extracts embedded per-sheet EMF streams
-- Replays a subset of EMF graphics records into Drawing IR (rectangle path tested; other
-  record types have code but limited test coverage)
-- Writes SVG previews and experimental DXF output
+| Format | Detection | Data source |
+| --- | --- | --- |
+| **Metalix cncKad** | Text header `gKad` / `CKad` (ASCII or UTF-16 LE) | Native text sections — geometry, layers, metadata, CAM |
+| **Solid Edge** | OLE compound file (`D0 CF 11 E0 …`) | Embedded viewer EMF streams |
+
+cncKad is the **primary, full-fidelity** path. Solid Edge conversion replays **visual EMF primitives only** — no native layers, dimensions, CAM, or parametrics. See [docs/limitations.md](docs/limitations.md).
+
+## Features
+
+- **cncKad:** sections `[300]`/`[310]` geometry (native arcs/circles), `[100]`/`[200]`/`[210]`/`[500–503]` metadata, `[1100]`/`[1200]` CAM
+- **Solid Edge:** CFB inspection, bounded EMF extraction, expanded record replay (lines, arcs, pens, transforms, text)
+- **DXF:** native `ARC`/`CIRCLE`, layer table + ACI colors, `$INSUNITS` (mm), drawing extents, CAM layers (`PUNCH`/`CUT`/`TOOLS`)
+- **SVG:** computed `viewBox` from bounds, per-layer groups, Y-flip for CAD coordinates
+- **CLI:** single-file `convert`, batch `convert-all`, optional `--cam-json` sidecar, `--units` override
 
 ## What this project does **not** do
 
@@ -19,43 +26,18 @@ embedded viewer EMF representation and replaying it into a canonical drawing IR.
 - Require Solid Edge, COM, Windows APIs, or commercial CAD runtimes
 - Provide quotation, manufacturing, AI extraction, or business automation
 
-## Supported platforms
-
-- Linux
-- Windows
-- macOS
-
-## Maturity
-
-Early development. Synthetic tests cover DFT inspection, bounded EMF extraction, and a
-rectangle-only EMF replay path into SVG/DXF. **Real Solid Edge `.dft` compatibility is not
-yet validated** — see [docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md).
-DXF conversion is experimental and fidelity varies by drawing content.
-
-## Compatibility
-
-Support is based on extracting embedded Solid Edge viewer EMF data. Files that do
-not contain compatible viewer streams, use unsupported compression/layout variants,
-or rely on non-embedded background-sheet content may not convert successfully.
-
-The project records some unsupported EMF record types in Drawing IR diagnostics.
-Control/state records may be skipped silently today; the CLI does not yet print conversion
-diagnostics. See [docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md).
-
 ## Output fidelity
 
-SVG is the primary validation output. DXF conversion maps visible EMF graphics into
-portable DXF entities where possible.
+| Source | Geometry | Layers / colors | Text | CAM | Material / thickness |
+| --- | --- | --- | --- | --- | --- |
+| cncKad | Native arcs / circles | ACI + layer ids | Planned | Yes (JSON + DXF layers) | Yes (metadata) |
+| Solid Edge EMF | Lines, arcs, beziers (partial) | No | Basic | No | No |
 
-Text, fills, clipping, embedded rasters, custom line styles, complex transforms,
-arcs (SVG and DXF), and unsupported EMF records may have reduced fidelity or be omitted
-with diagnostics where implemented.
+Format details: [docs/cnckad-format.md](docs/cnckad-format.md) · Status matrix: [docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md)
 
-## Security
+## Supported platforms
 
-DFT files are treated as untrusted input. The parser applies limits to file sizes,
-streams, decompression output, EMF record counts, and allocation sizes. Please report
-security issues privately through [SECURITY.md](SECURITY.md).
+Linux · Windows · macOS (pure Rust, no Solid Edge install required)
 
 ## Quick start
 
@@ -65,18 +47,63 @@ with the C++ workload so `link.exe` is available.
 
 ```bash
 cargo build --release
+```
 
+### cncKad (typical workflow)
+
+```bash
+# Inspect part name, entity counts, sheet size
+dft2dxf inspect part.DFT
+
+# Convert to DXF + SVG preview + CAM/metadata JSON sidecar
+dft2dxf convert part.DFT --output part.dxf --svg-preview ./preview --cam-json
+
+# Validate all local fixtures (gitignored under tests/fixtures/valid/local/)
+dft2dxf validate-fixtures --local
+
+# Batch-convert every local .DFT → out/dxf/*.dxf and out/svg/<name>/sheet-1.svg
+dft2dxf convert-all --local --dxf-dir ./out/dxf --svg-dir ./out/svg --cam-json
+```
+
+On Windows, use `.\target\release\dft2dxf.exe` if the binary is not on `PATH`.
+
+### Solid Edge
+
+```bash
 # Inspect compound file structure and sheet metadata
 dft2dxf inspect drawing.dft
 
-# Extract embedded EMF for validation
+# Extract embedded EMF for debugging
 dft2dxf extract-emf drawing.dft --output-dir ./debug --sheet 1
 
-# Experimental conversion to DXF
+# Convert sheet 1 to DXF (+ optional SVG)
 dft2dxf convert drawing.dft --output output.dxf --sheet 1 --svg-preview ./preview
 ```
 
+### CLI flags (global)
+
+| Flag | Description |
+| --- | --- |
+| `--local` / `-l` | Use gitignored fixtures under `tests/fixtures/valid/local/` |
+| `--cam-json` | Write `<output>.cam.json` with metadata + CAM program |
+| `--units mm\|in\|unitless` | Override DXF drawing units |
+| `--format json` | Machine-readable output for inspect / validate / convert-all |
+
 ## Library usage
+
+### cncKad
+
+```rust
+use ckad_reader::read_to_drawing;
+
+let drawing = read_to_drawing("part.DFT".as_ref(), ckad_reader::DEFAULT_MAX_FILE_SIZE)?;
+println!("entities: {}", drawing.sheets[0].entities.len());
+if let Some(cam) = &drawing.cam {
+  println!("tools: {}, ops: {}", cam.tools.len(), cam.operations.len());
+}
+```
+
+### Solid Edge
 
 ```rust
 use dft_reader::{DftDocument, DftOpenOptions, Limits};
@@ -88,12 +115,32 @@ let emf = document.extract_emf(1)?;
 emf.write_to("sheet-1.emf")?;
 ```
 
+## Workspace layout
+
+| Crate | Role |
+| --- | --- |
+| `ckad-reader` | cncKad text `.dft` → Drawing IR |
+| `dft-reader` | Solid Edge CFB open, metadata, EMF extraction |
+| `emf-reader` | EMF record replay → Drawing IR |
+| `drawing-ir` | Shared geometry, metadata, CAM model |
+| `drawing-dxf` / `drawing-svg` | DXF and SVG writers |
+| `dft2dxf-cli` | Command-line interface |
+| `dft2dxf-testkit` | Synthetic fixtures for tests |
+
 ## Contributing fixtures
 
 Do not submit proprietary customer drawings without explicit written permission.
-Prefer synthetic or anonymized samples. See [docs/test-fixtures.md](docs/test-fixtures.md),
-[tests/fixtures/valid/INTAKE.md](tests/fixtures/valid/INTAKE.md), and
-[docs/ROADMAP.md](docs/ROADMAP.md) (milestone M1).
+
+- **cncKad:** place private files in `tests/fixtures/valid/local/` (gitignored)
+- **Solid Edge:** see [tests/fixtures/valid/INTAKE.md](tests/fixtures/valid/INTAKE.md) for redistributable fixture requirements
+
+Also see [docs/test-fixtures.md](docs/test-fixtures.md) and [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## Security
+
+DFT files are treated as untrusted input. Parsers apply limits to file sizes, stream sizes,
+decompressed output, EMF record counts, and CFB traversal depth. Report security issues
+privately through [SECURITY.md](SECURITY.md).
 
 ## License
 

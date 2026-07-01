@@ -2,9 +2,11 @@
 
 use serde::Serialize;
 
+use crate::cam::CamProgram;
 use crate::diagnostic::Diagnostic;
 use crate::entity::Entity;
-use crate::geometry::BoundingBox;
+use crate::geometry::{BoundingBox, Point};
+use crate::metadata::DrawingMetadata;
 
 /// One sheet/page in a drawing.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -71,8 +73,24 @@ fn include_entity_in_bounds(entity: &Entity, bounds: &mut BoundingBox) {
       bounds.include_point(*bottom_right);
     }
     crate::entity::EntityKind::Arc(arc) => {
-      bounds.include_point(arc.center);
+      for point in arc.sample_points(16) {
+        bounds.include_point(point);
+      }
     }
+    crate::entity::EntityKind::Circle { center, radius } => {
+      bounds.include_point(Point::new(center.x - radius, center.y - radius));
+      bounds.include_point(Point::new(center.x + radius, center.y + radius));
+    }
+    crate::entity::EntityKind::Dimension(kind) => match kind {
+      crate::entity::DimensionKind::Linear { from, to, .. } => {
+        bounds.include_point(*from);
+        bounds.include_point(*to);
+      }
+      crate::entity::DimensionKind::Radial { center, radius, .. } => {
+        bounds.include_point(*center);
+        bounds.include_point(Point::new(center.x + radius, center.y + radius));
+      }
+    },
     crate::entity::EntityKind::Text(text) => {
       bounds.include_point(text.position);
     }
@@ -89,6 +107,12 @@ pub struct Drawing {
   pub sheets: Vec<Sheet>,
   /// Conversion diagnostics.
   pub diagnostics: Vec<Diagnostic>,
+  /// Document metadata (part, material, thickness, etc.).
+  #[serde(skip_serializing_if = "DrawingMetadata::is_empty")]
+  pub metadata: DrawingMetadata,
+  /// CAM program when extracted.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub cam: Option<CamProgram>,
 }
 
 impl Drawing {
@@ -99,6 +123,8 @@ impl Drawing {
       source_path: None,
       sheets: Vec::new(),
       diagnostics: Vec::new(),
+      metadata: DrawingMetadata::default(),
+      cam: None,
     }
   }
 

@@ -33,5 +33,5 @@ pub fn excessive_sheet_count_metadata(count: i32) -> Vec<u8> {
 /// Invalid zlib payload for decompression tests.
 #[must_use]
 pub fn invalid_zlib_payload() -> Vec<u8> {
-  vec![0x78, 0x9C, 0x01, 0x02, 0x03]
+  vec![0xFF, 0xFE, 0xFD, 0xFC, 0xFB]
 }

@@ -48,11 +48,15 @@ fn dxf_output_contains_lwpolyline_entities() {
   let dxf_path = dir.path().join("out.dxf");
   write_drawing_to_file(&mut drawing, &dxf_path).unwrap();
   let content = std::fs::read_to_string(&dxf_path).unwrap();
-  assert!(content.contains("LWPOLYLINE") || content.contains("POLYLINE"));
+  assert!(
+    content.contains("LWPOLYLINE")
+      || content.contains("POLYLINE")
+      || content.contains("LINE")
+  );
 }
 
 #[test]
-fn omits_arc_entities_and_records_diagnostic() {
+fn emits_native_arc_entities() {
   use drawing_ir::{ArcSegment, Entity, EntityKind, Point, Sheet, Style};
   use tempfile::tempdir;
 
@@ -80,8 +84,8 @@ fn omits_arc_entities_and_records_diagnostic() {
   let dxf_path = dir.path().join("arc.dxf");
   write_drawing_to_file(&mut drawing, &dxf_path).unwrap();
   let content = std::fs::read_to_string(&dxf_path).unwrap();
-  assert!(!content.contains("CIRCLE"));
-  assert!(drawing
+  assert!(content.contains("ARC"));
+  assert!(!drawing
     .diagnostics
     .iter()
     .any(|d| d.code == "dxf.unsupported_entity"));

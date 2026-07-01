@@ -11,6 +11,7 @@ use anyhow::{Context, Result};
 use ckad_reader::{detect_format, read_to_drawing, DftContainerFormat};
 use clap::{Parser, Subcommand, ValueEnum};
 use dft_reader::{DftDocument, DftOpenOptions, Limits};
+use drawing_ir::PaperUnit;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Parser)]
@@ -39,7 +40,7 @@ struct Cli {
   sheet: Option<u32>,
 
   /// Output format for structured diagnostics.
-  #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
+  #[arg(long, value_enum, default_value_t = OutputFormat::Human, global = true)]
   format: OutputFormat,
 
   /// Override maximum input file size in bytes.
@@ -57,6 +58,14 @@ struct Cli {
   /// Use gitignored local `.dft` fixtures under `tests/fixtures/valid/local/`.
   #[arg(short = 'l', long = "local", global = true)]
   local: bool,
+
+  /// Write CAM/metadata JSON sidecar next to DXF output.
+  #[arg(long = "cam-json", global = true)]
+  cam_json: bool,
+
+  /// Override output drawing units (`mm`, `in`, `unitless`).
+  #[arg(long = "units", value_name = "UNIT", global = true)]
+  units: Option<String>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -98,6 +107,18 @@ enum Commands {
     #[arg(long, value_name = "DIR")]
     svg_preview: Option<PathBuf>,
   },
+  /// Batch-convert fixtures or a directory of `.dft` files to DXF/SVG.
+  ConvertAll {
+    /// Output directory for `.dxf` files.
+    #[arg(long, value_name = "DIR")]
+    dxf_dir: PathBuf,
+    /// Output directory for per-file SVG folders.
+    #[arg(long, value_name = "DIR")]
+    svg_dir: PathBuf,
+    /// Optional input directory (defaults to active valid fixtures dir).
+    #[arg(long, value_name = "DIR")]
+    input_dir: Option<PathBuf>,
+  },
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -127,7 +148,29 @@ fn main() -> Result<()> {
       output,
       sheet,
       svg_preview,
-    }) => cmd_convert(&input, &output, sheet, svg_preview, limits),
+    }) => cmd_convert(
+      &input,
+      &output,
+      sheet,
+      svg_preview,
+      limits,
+      cli.cam_json,
+      cli.units.as_deref(),
+    ),
+    Some(Commands::ConvertAll {
+      dxf_dir,
+      svg_dir,
+      input_dir,
+    }) => cmd_convert_all(
+      &dxf_dir,
+      &svg_dir,
+      input_dir.as_deref(),
+      limits,
+      cli.local,
+      cli.cam_json,
+      cli.units.as_deref(),
+      cli.format,
+    ),
     None => {
       let input = cli
         .input
@@ -135,7 +178,15 @@ fn main() -> Result<()> {
       let output = cli
         .output
         .context("missing --output; use `dft2dxf convert` for explicit conversion")?;
-      cmd_convert(&input, &output, cli.sheet, None, limits)
+      cmd_convert(
+        &input,
+        &output,
+        cli.sheet,
+        None,
+        limits,
+        cli.cam_json,
+        cli.units.as_deref(),
+      )
     }
   }
 }
@@ -233,16 +284,26 @@ fn cmd_convert(
   sheet: Option<u32>,
   svg_preview: Option<PathBuf>,
   limits: Limits,
+  cam_json: bool,
+  units: Option<&str>,
 ) -> Result<()> {
   match sniff_format(input)? {
     DftContainerFormat::CncKad => {
       if sheet.is_some() {
         tracing::warn!("cncKad .dft files contain a single geometry sheet; --sheet is ignored");
       }
-      cmd_convert_cnckad(input, output, svg_preview, limits)
+      cmd_convert_cnckad(input, output, svg_preview, limits, cam_json, units)
     }
     DftContainerFormat::SolidEdgeCompound => {
-      cmd_convert_solid_edge(input, output, sheet, svg_preview, limits)
+      cmd_convert_solid_edge(
+        input,
+        output,
+        sheet,
+        svg_preview,
+        limits,
+        cam_json,
+        units,
+      )
     }
   }
 }
@@ -253,6 +314,8 @@ fn cmd_convert_solid_edge(
   sheet: Option<u32>,
   svg_preview: Option<PathBuf>,
   limits: Limits,
+  cam_json: bool,
+  units: Option<&str>,
 ) -> Result<()> {
   let mut document =
     DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
@@ -278,8 +341,14 @@ fn cmd_convert_solid_edge(
     Some(sheet_meta.info.height),
   );
 
+  apply_units_override(&mut drawing, units);
+
   drawing_dxf::write_drawing_to_file(&mut drawing, output)
     .with_context(|| format!("failed to write DXF to {}", output.display()))?;
+
+  if cam_json {
+    write_cam_json_sidecar(&drawing, output)?;
+  }
 
   if let Some(dir) = svg_preview {
     let svg_path = dir.join(format!("sheet-{index}.svg"));
@@ -296,12 +365,20 @@ fn cmd_convert_cnckad(
   output: &PathBuf,
   svg_preview: Option<PathBuf>,
   limits: Limits,
+  cam_json: bool,
+  units: Option<&str>,
 ) -> Result<()> {
   let mut drawing = read_to_drawing(input, limits.max_file_size)
     .with_context(|| format!("failed to read cncKad file {}", input.display()))?;
 
+  apply_units_override(&mut drawing, units);
+
   drawing_dxf::write_drawing_to_file(&mut drawing, output)
     .with_context(|| format!("failed to write DXF to {}", output.display()))?;
+
+  if cam_json {
+    write_cam_json_sidecar(&drawing, output)?;
+  }
 
   if let Some(dir) = svg_preview {
     std::fs::create_dir_all(&dir)?;
@@ -311,6 +388,175 @@ fn cmd_convert_cnckad(
   }
 
   tracing::info!(output = %output.display(), format = "cnckad", "conversion complete");
+  Ok(())
+}
+
+fn cmd_convert_all(
+  dxf_dir: &PathBuf,
+  svg_dir: &PathBuf,
+  input_dir: Option<&Path>,
+  limits: Limits,
+  local: bool,
+  cam_json: bool,
+  units: Option<&str>,
+  format: OutputFormat,
+) -> Result<()> {
+  std::fs::create_dir_all(dxf_dir)?;
+  std::fs::create_dir_all(svg_dir)?;
+
+  let fixtures = if let Some(dir) = input_dir {
+    discover_dft_files(dir)?
+  } else {
+    dft2dxf_testkit::discover_valid_dft_fixtures(local)
+  };
+
+  if fixtures.is_empty() {
+    anyhow::bail!("no .dft files found for batch conversion");
+  }
+
+  let mut summaries = Vec::new();
+  for input in &fixtures {
+    let stem = input
+      .file_stem()
+      .and_then(|value| value.to_str())
+      .unwrap_or("output");
+    let dxf_path = dxf_dir.join(format!("{stem}.dxf"));
+    let svg_folder = svg_dir.join(stem);
+    std::fs::create_dir_all(&svg_folder)?;
+
+    let result = (|| -> Result<ConvertSummary> {
+      cmd_convert(
+        input,
+        &dxf_path,
+        None,
+        Some(svg_folder.clone()),
+        limits,
+        cam_json,
+        units,
+      )?;
+      let drawing = load_drawing_for_summary(input, limits)?;
+      Ok(summarize_drawing(input, &drawing))
+    })();
+
+    summaries.push(match result {
+      Ok(summary) => summary,
+      Err(err) => ConvertSummary {
+        input: input.display().to_string(),
+        ok: false,
+        error: Some(err.to_string()),
+        ..ConvertSummary::default()
+      },
+    });
+  }
+
+  output::render_convert_all(&summaries, format)?;
+  if summaries.iter().any(|summary| !summary.ok) {
+    anyhow::bail!("one or more batch conversions failed");
+  }
+  Ok(())
+}
+
+fn discover_dft_files(dir: &Path) -> Result<Vec<PathBuf>> {
+  let mut files = Vec::new();
+  for entry in std::fs::read_dir(dir)? {
+    let entry = entry?;
+    let path = entry.path();
+    if path
+      .extension()
+      .and_then(|ext| ext.to_str())
+      .is_some_and(|ext| ext.eq_ignore_ascii_case("dft"))
+    {
+      files.push(path);
+    }
+  }
+  files.sort();
+  Ok(files)
+}
+
+fn load_drawing_for_summary(input: &Path, limits: Limits) -> Result<drawing_ir::Drawing> {
+  match sniff_format(input)? {
+    DftContainerFormat::CncKad => read_to_drawing(input, limits.max_file_size)
+      .map_err(|err| anyhow::anyhow!(err.to_string())),
+    DftContainerFormat::SolidEdgeCompound => {
+      let mut document =
+        DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
+      let index = document.sheets()?.first().map(|sheet| sheet.index).unwrap_or(1);
+      let sheet_meta = document.sheet(index)?;
+      let emf = document.extract_emf(index)?;
+      let emf_doc = emf_reader::EmfDocument::parse(
+        &emf.data,
+        emf_reader::DEFAULT_MAX_RECORD_COUNT,
+        emf_reader::DEFAULT_MAX_RECORD_SIZE,
+      )?;
+      Ok(emf_reader::replay_to_drawing(
+        &emf_doc,
+        Some(sheet_meta.index),
+        Some(sheet_meta.name.clone()),
+        Some(sheet_meta.info.width),
+        Some(sheet_meta.info.height),
+      ))
+    }
+  }
+}
+
+#[derive(Debug, Default, serde::Serialize)]
+struct ConvertSummary {
+  input: String,
+  ok: bool,
+  entities: usize,
+  layers: usize,
+  has_cam: bool,
+  diagnostics: usize,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  error: Option<String>,
+}
+
+fn summarize_drawing(input: &Path, drawing: &drawing_ir::Drawing) -> ConvertSummary {
+  let entities: usize = drawing.sheets.iter().map(|sheet| sheet.entities.len()).sum();
+  let layers: usize = drawing
+    .sheets
+    .iter()
+    .flat_map(|sheet| sheet.entities.iter())
+    .filter_map(|entity| entity.layer.as_ref())
+    .collect::<std::collections::BTreeSet<_>>()
+    .len();
+  ConvertSummary {
+    input: input.display().to_string(),
+    ok: true,
+    entities,
+    layers,
+    has_cam: drawing.cam.is_some(),
+    diagnostics: drawing.diagnostics.len(),
+    error: None,
+  }
+}
+
+fn apply_units_override(drawing: &mut drawing_ir::Drawing, units: Option<&str>) {
+  let Some(units) = units else {
+    return;
+  };
+  drawing.metadata.units = match units.to_ascii_lowercase().as_str() {
+    "mm" | "millimeters" => PaperUnit::Millimeters,
+    "in" | "inches" => PaperUnit::Inches,
+    "unitless" => PaperUnit::Unitless,
+    _ => PaperUnit::Millimeters,
+  };
+}
+
+fn write_cam_json_sidecar(drawing: &drawing_ir::Drawing, dxf_output: &Path) -> Result<()> {
+  let sidecar = dxf_output.with_extension("cam.json");
+  #[derive(serde::Serialize)]
+  struct Sidecar<'a> {
+    metadata: &'a drawing_ir::DrawingMetadata,
+    cam: &'a Option<drawing_ir::CamProgram>,
+    diagnostics: &'a [drawing_ir::Diagnostic],
+  }
+  let payload = Sidecar {
+    metadata: &drawing.metadata,
+    cam: &drawing.cam,
+    diagnostics: &drawing.diagnostics,
+  };
+  std::fs::write(&sidecar, serde_json::to_string_pretty(&payload)?)?;
   Ok(())
 }
 

@@ -6,6 +6,38 @@ use crate::diagnostic::SourceProvenance;
 use crate::geometry::{ArcSegment, Path, Point, Polyline};
 use crate::style::Style;
 
+fn is_zero(value: &f64) -> bool {
+  *value == 0.0
+}
+
+/// Linear or radial dimension annotation.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum DimensionKind {
+  /// Linear distance between two points.
+  Linear {
+    /// First anchor.
+    from: Point,
+    /// Second anchor.
+    to: Point,
+    /// Dimension line offset.
+    offset: f64,
+    /// Display text override.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    text: Option<String>,
+  },
+  /// Radial dimension from a center.
+  Radial {
+    /// Arc/circle center.
+    center: Point,
+    /// Radius.
+    radius: f64,
+    /// Display text override.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    text: Option<String>,
+  },
+}
+
 /// Text alignment placeholder for EMF text output.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TextRun {
@@ -18,6 +50,9 @@ pub struct TextRun {
   pub font_family: Option<String>,
   /// Font height in drawing units.
   pub font_size: f64,
+  /// Rotation in degrees (counter-clockwise).
+  #[serde(skip_serializing_if = "is_zero")]
+  pub rotation_deg: f64,
   /// Visual style.
   pub style: Style,
   /// Source provenance.
@@ -49,6 +84,15 @@ pub enum EntityKind {
   },
   /// Circular arc.
   Arc(ArcSegment),
+  /// Full circle.
+  Circle {
+    /// Center point.
+    center: Point,
+    /// Radius.
+    radius: f64,
+  },
+  /// Dimension annotation.
+  Dimension(DimensionKind),
   /// Text run.
   Text(TextRun),
 }

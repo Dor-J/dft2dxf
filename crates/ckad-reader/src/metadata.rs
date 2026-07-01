@@ -1,0 +1,92 @@
+//! cncKad metadata section parser.
+
+use drawing_ir::{DrawingMetadata, PaperUnit};
+
+use crate::error::{CkadError, CkadResult};
+
+/// Parses section `[100]` into part/customer fields.
+#[must_use]
+pub fn parse_part_section(lines: &[String]) -> (Option<String>, Option<String>) {
+  let mut values = lines
+    .iter()
+    .map(|line| line.trim())
+    .filter(|line| !line.is_empty());
+  let part_name = values.next().map(str::to_string);
+  let customer = values.next().map(str::to_string);
+  (part_name, customer)
+}
+
+/// Parses section `[200]` for sheet extents, scale, and material hints.
+pub fn parse_sheet_section(lines: &[String]) -> CkadResult<(Option<f64>, Option<f64>, DrawingMetadata)> {
+  let mut metadata = DrawingMetadata::default();
+  metadata.units = PaperUnit::Millimeters;
+  let mut width = None;
+  let mut height = None;
+
+  for line in lines {
+    let trimmed = line.trim();
+    if let Some(rest) = trimmed.strip_prefix("/E ") {
+      let values = parse_floats(rest)?;
+      if values.len() >= 4 {
+        width = Some(values[2] - values[0]);
+        height = Some(values[3] - values[1]);
+      }
+    } else if let Some(rest) = trimmed.strip_prefix("/P ") {
+      let values = parse_floats(rest)?;
+      if values.len() >= 3 {
+        metadata.scale = Some(values[2]);
+      }
+    } else if let Some(rest) = trimmed.strip_prefix("/M ") {
+      let values = parse_floats(rest)?;
+      if !values.is_empty() {
+        metadata.material = Some(format!("M{}", values[0] as i32));
+      }
+    }
+  }
+
+  Ok((width, height, metadata))
+}
+
+/// Parses section `[210]` for K-factor.
+#[must_use]
+pub fn parse_kfactor_section(lines: &[String]) -> Option<f64> {
+  for line in lines {
+    let trimmed = line.trim();
+    if let Some(rest) = trimmed.strip_prefix("KFactor") {
+      return rest.trim().parse().ok();
+    }
+    if let Ok(value) = trimmed.parse::<f64>() {
+      return Some(value);
+    }
+  }
+  None
+}
+
+/// Parses thickness from sections `[500]`..`[503]`.
+#[must_use]
+pub fn parse_thickness_sections(sections: &[(u32, Vec<String>)]) -> Option<f64> {
+  for (id, lines) in sections {
+    if (500..=503).contains(id) {
+      for line in lines {
+        if let Ok(value) = line.trim().parse::<f64>() {
+          if value > 0.0 {
+            return Some(value);
+          }
+        }
+      }
+    }
+  }
+  None
+}
+
+fn parse_floats(line: &str) -> CkadResult<Vec<f64>> {
+  line
+    .split_whitespace()
+    .map(|token| {
+      token.parse::<f64>().map_err(|err| CkadError::InvalidFormat {
+        context: "numeric token".to_string(),
+        message: format!("invalid float {token:?}: {err}"),
+      })
+    })
+    .collect()
+}

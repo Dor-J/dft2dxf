@@ -25,8 +25,8 @@ fn rejects_non_compound_file() {
   let dir = tempfile::tempdir().unwrap();
   let path = dir.path().join("not-a-dft.bin");
   std::fs::write(&path, b"not a compound file").unwrap();
-  let err = DftDocument::open(&path).unwrap_err();
-  assert!(matches!(err, DftError::NotCompoundFile { .. }));
+  let result = DftDocument::open(&path);
+  assert!(matches!(result, Err(DftError::NotCompoundFile { .. })));
 }
 
 #[test]

@@ -83,7 +83,7 @@ pub(crate) fn build_storage_tree<R: Read + Seek>(
 ) -> DftResult<StorageTree> {
   let mut entries = Vec::new();
   let mut entry_count = 0u32;
-  walk_storage(compound, "/", limits, &mut entries, &mut entry_count, 0)?;
+  walk_storage(compound, limits, &mut entries, &mut entry_count)?;
 
   let has_viewer_info = entries.iter().any(|entry| {
     entry.path.ends_with(STORAGE_J_DRAFT_VIEWER_INFO) && entry.kind == StorageEntryKind::Storage
@@ -102,22 +102,12 @@ pub(crate) fn build_storage_tree<R: Read + Seek>(
 
 fn walk_storage<R: Read + Seek>(
   compound: &CompoundFile<R>,
-  path: &str,
   limits: &Limits,
   entries: &mut Vec<StorageEntry>,
   entry_count: &mut u32,
-  depth: u32,
 ) -> DftResult<()> {
-  if depth > limits.max_storage_depth {
-    return Err(DftError::limit(
-      "max_storage_depth",
-      limits.max_storage_depth as u64,
-      depth as u64,
-    ));
-  }
-
   for entry in compound
-    .walk_storage(path)
+    .walk_storage("/")
     .map_err(DftError::CompoundFile)?
   {
     if entry.is_root() {
@@ -134,21 +124,21 @@ fn walk_storage<R: Read + Seek>(
     }
 
     let entry_path = entry.path().to_string_lossy().replace('\\', "/");
+    let entry_depth = entry_path.chars().filter(|ch| *ch == '/').count() as u32;
+    if entry_depth > limits.max_storage_depth {
+      return Err(DftError::limit(
+        "max_storage_depth",
+        limits.max_storage_depth as u64,
+        entry_depth as u64,
+      ));
+    }
 
     if entry.is_storage() {
       entries.push(StorageEntry {
-        path: entry_path.clone(),
+        path: entry_path,
         kind: StorageEntryKind::Storage,
         size: None,
       });
-      walk_storage(
-        compound,
-        &entry_path,
-        limits,
-        entries,
-        entry_count,
-        depth + 1,
-      )?;
     } else if entry.is_stream() {
       entries.push(StorageEntry {
         path: entry_path,

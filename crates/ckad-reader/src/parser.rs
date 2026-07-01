@@ -4,19 +4,18 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use drawing_ir::{
-  Drawing, Entity, EntityKind, Point, Polyline, Sheet, Style,
+  ArcSegment, Drawing, Entity, EntityKind, Point, Sheet, Style,
 };
 
+use crate::cam::parse_cam;
 use crate::error::{CkadError, CkadResult};
+use crate::metadata::{
+  parse_kfactor_section, parse_part_section, parse_sheet_section, parse_thickness_sections,
+};
+use crate::style::{EntityMeta, inline_color, inline_layer_id};
 
 /// Default maximum input file size (50 MiB).
 pub const DEFAULT_MAX_FILE_SIZE: u64 = 50 * 1024 * 1024;
-
-/// Polyline segments used when approximating circles.
-const CIRCLE_SEGMENTS: usize = 32;
-
-/// Polyline segments used when approximating arc spans.
-const ARC_SEGMENTS: usize = 16;
 
 /// Reads a cncKad text `.dft` file into [`Drawing`] IR.
 pub fn read_to_drawing(path: &Path, max_file_size: u64) -> CkadResult<Drawing> {
@@ -58,21 +57,46 @@ fn decode_utf16_le(bytes: &[u8]) -> String {
 /// Parses cncKad text content into [`Drawing`] IR.
 pub fn parse_content(content: &str, source_path: Option<String>) -> CkadResult<Drawing> {
   let sections = split_sections(content);
-  let part_name = sections
+  let (part_name, customer) = sections
     .get(&100)
-    .map(Vec::as_slice)
-    .and_then(first_meaningful_line)
-    .map(str::to_string);
-  let (width, height) = sections
-    .get(&200)
-    .map(|lines| parse_sheet_extents(lines))
-    .transpose()?
+    .map(|lines| parse_part_section(lines))
     .unwrap_or((None, None));
+  let (width, height, mut metadata) = sections
+    .get(&200)
+    .map(|lines| parse_sheet_section(lines))
+    .transpose()?
+    .unwrap_or((None, None, drawing_ir::DrawingMetadata::default()));
+  metadata.part_name = part_name.clone();
+  metadata.customer = customer;
+  if let Some(k_factor) = sections.get(&210).map(|lines| parse_kfactor_section(lines)) {
+    metadata.k_factor = k_factor;
+  }
+  let thickness_sections: Vec<(u32, Vec<String>)> = sections
+    .iter()
+    .filter(|(id, _)| (500..=503).contains(*id))
+    .map(|(id, lines)| (*id, lines.clone()))
+    .collect();
+  if let Some(thickness) = parse_thickness_sections(&thickness_sections) {
+    metadata.thickness = Some(thickness);
+  }
 
   let mut entities = Vec::new();
   if let Some(section) = sections.get(&300) {
     entities.extend(parse_geometry_section(section, "300")?);
   }
+  if let Some(section) = sections.get(&310) {
+    entities.extend(parse_geometry_section(section, "310")?);
+  }
+
+  let cam = parse_cam(
+    sections.get(&1100).map(|lines| lines.as_slice()),
+    sections.get(&1200).map(|lines| lines.as_slice()),
+  )?;
+  let cam = if cam.tools.is_empty() && cam.operations.is_empty() {
+    None
+  } else {
+    Some(cam)
+  };
 
   let mut sheet = Sheet {
     index: Some(1),
@@ -88,6 +112,8 @@ pub fn parse_content(content: &str, source_path: Option<String>) -> CkadResult<D
     source_path,
     sheets: vec![sheet],
     diagnostics: Vec::new(),
+    metadata,
+    cam,
   })
 }
 
@@ -118,27 +144,6 @@ fn parse_section_header(line: &str) -> Option<u32> {
   inner.parse().ok()
 }
 
-fn first_meaningful_line(lines: &[String]) -> Option<&str> {
-  lines
-    .iter()
-    .find(|line| !line.is_empty())
-    .map(String::as_str)
-}
-
-fn parse_sheet_extents(lines: &[String]) -> CkadResult<(Option<f64>, Option<f64>)> {
-  for line in lines {
-    if let Some(rest) = line.strip_prefix("/E ") {
-      let values = parse_floats(rest)?;
-      if values.len() >= 4 {
-        let width = values[2] - values[0];
-        let height = values[3] - values[1];
-        return Ok((Some(width), Some(height)));
-      }
-    }
-  }
-  Ok((None, None))
-}
-
 fn parse_geometry_section(lines: &[String], context: &str) -> CkadResult<Vec<Entity>> {
   let mut entities = Vec::new();
   let mut index = 0usize;
@@ -149,13 +154,14 @@ fn parse_geometry_section(lines: &[String], context: &str) -> CkadResult<Vec<Ent
         let count = read_count(&lines, &mut index, context)?;
         for _ in 0..count {
           let coords = read_float_line(&lines, &mut index, context)?;
-          skip_line(&lines, &mut index);
+          let meta = read_metadata_line(&lines, &mut index);
           if coords.len() >= 4 {
             entities.push(line_entity(
               coords[0],
               coords[1],
               coords[2],
               coords[3],
+              meta,
             ));
           }
         }
@@ -171,7 +177,8 @@ fn parse_geometry_section(lines: &[String], context: &str) -> CkadResult<Vec<Ent
         for _ in 0..count {
           let coords = read_float_line(&lines, &mut index, context)?;
           if coords.len() >= 3 {
-            entities.push(circle_entity(coords[0], coords[1], coords[2]));
+            let meta = entity_meta_from_inline(&coords);
+            entities.push(circle_entity(coords[0], coords[1], coords[2], meta));
           }
         }
       }
@@ -180,23 +187,51 @@ fn parse_geometry_section(lines: &[String], context: &str) -> CkadResult<Vec<Ent
         let count = read_count(&lines, &mut index, context)?;
         for _ in 0..count {
           let header = read_float_line(&lines, &mut index, context)?;
-          skip_line(&lines, &mut index);
-          let angles = read_float_line(&lines, &mut index, context)?;
-          if header.len() >= 3 && angles.len() >= 2 {
-            entities.push(arc_entity(
-              header[0],
-              header[1],
-              header[2],
-              angles[0],
-              angles[1],
-            ));
+          if header.len() < 3 {
+            continue;
           }
+          let meta = entity_meta_from_inline(&header);
+          let (start_deg, end_deg) = read_arc_angles(&lines, &mut index, context)?;
+          entities.push(arc_entity(
+            header[0],
+            header[1],
+            header[2],
+            start_deg,
+            end_deg,
+            meta,
+          ));
         }
       }
       _ => index += 1,
     }
   }
   Ok(entities)
+}
+
+fn read_arc_angles(
+  lines: &[String],
+  index: &mut usize,
+  context: &str,
+) -> CkadResult<(f64, f64)> {
+  skip_extension_lines(lines, index);
+  let next = read_float_line(lines, index, context)?;
+  if next.len() >= 4 {
+    let angles = read_float_line(lines, index, context)?;
+    if angles.len() >= 2 {
+      return Ok((angles[0], angles[1]));
+    }
+    return Err(CkadError::InvalidFormat {
+      context: context.to_string(),
+      message: "arc missing angle line".to_string(),
+    });
+  }
+  if next.len() >= 2 {
+    return Ok((next[0], next[1]));
+  }
+  Err(CkadError::InvalidFormat {
+    context: context.to_string(),
+    message: "arc missing angle data".to_string(),
+  })
 }
 
 fn read_count(lines: &[String], index: &mut usize, context: &str) -> CkadResult<usize> {
@@ -235,11 +270,21 @@ fn read_float_line(lines: &[String], index: &mut usize, context: &str) -> CkadRe
   parse_floats(line)
 }
 
-fn skip_line(lines: &[String], index: &mut usize) {
-  if *index < lines.len() {
-    *index += 1;
-  }
+fn read_metadata_line(lines: &[String], index: &mut usize) -> EntityMeta {
   skip_extension_lines(lines, index);
+  if *index >= lines.len() {
+    return EntityMeta::default();
+  }
+  let line = &lines[*index];
+  if line.starts_with("OLE4DM") {
+    return EntityMeta::default();
+  }
+  if line.split_whitespace().count() >= 4 {
+    let meta = EntityMeta::from_line(line);
+    *index += 1;
+    return meta;
+  }
+  EntityMeta::default()
 }
 
 fn skip_extension_lines(lines: &[String], index: &mut usize) {
@@ -265,8 +310,22 @@ fn parse_floats(line: &str) -> CkadResult<Vec<f64>> {
     .collect()
 }
 
-fn line_entity(x1: f64, y1: f64, x2: f64, y2: f64) -> Entity {
-  Entity {
+fn entity_meta_from_inline(values: &[f64]) -> EntityMeta {
+  EntityMeta {
+    layer_id: inline_layer_id(values),
+    color_aci: inline_color(values),
+  }
+}
+
+fn apply_meta(entity: &mut Entity, meta: EntityMeta) {
+  entity.layer = meta.layer_name();
+  if meta.color_aci.is_some() {
+    entity.style = meta.style();
+  }
+}
+
+fn line_entity(x1: f64, y1: f64, x2: f64, y2: f64, meta: EntityMeta) -> Entity {
+  let mut entity = Entity {
     layer: None,
     style: Style::default(),
     kind: EntityKind::Line {
@@ -274,68 +333,47 @@ fn line_entity(x1: f64, y1: f64, x2: f64, y2: f64) -> Entity {
       to: Point::new(x2, y2),
     },
     provenance: None,
-  }
+  };
+  apply_meta(&mut entity, meta);
+  entity
 }
 
-fn circle_entity(cx: f64, cy: f64, radius: f64) -> Entity {
-  Entity {
+fn circle_entity(cx: f64, cy: f64, radius: f64, meta: EntityMeta) -> Entity {
+  let mut entity = Entity {
     layer: None,
     style: Style::default(),
-    kind: EntityKind::Polyline(circle_polyline(cx, cy, radius)),
-    provenance: None,
-  }
-}
-
-fn arc_entity(cx: f64, cy: f64, radius: f64, start_deg: f64, end_deg: f64) -> Entity {
-  Entity {
-    layer: None,
-    style: Style::default(),
-    kind: EntityKind::Polyline(arc_polyline(
-      cx,
-      cy,
+    kind: EntityKind::Circle {
+      center: Point::new(cx, cy),
       radius,
-      start_deg,
-      end_deg,
-    )),
+    },
     provenance: None,
-  }
+  };
+  apply_meta(&mut entity, meta);
+  entity
 }
 
-fn circle_polyline(cx: f64, cy: f64, radius: f64) -> Polyline {
-  let points = arc_points(cx, cy, radius, 0.0, 360.0, CIRCLE_SEGMENTS);
-  Polyline {
-    points,
-    closed: false,
-  }
-}
-
-fn arc_polyline(cx: f64, cy: f64, radius: f64, start_deg: f64, end_deg: f64) -> Polyline {
-  let points = arc_points(cx, cy, radius, start_deg, end_deg, ARC_SEGMENTS);
-  Polyline {
-    points,
-    closed: false,
-  }
-}
-
-fn arc_points(
+fn arc_entity(
   cx: f64,
   cy: f64,
   radius: f64,
   start_deg: f64,
   end_deg: f64,
-  segments: usize,
-) -> Vec<Point> {
+  meta: EntityMeta,
+) -> Entity {
   let (start, end) = normalize_arc_sweep(start_deg, end_deg);
-  if segments == 0 {
-    return Vec::new();
-  }
-  let step = (end - start) / segments as f64;
-  (0..=segments)
-    .map(|index| {
-      let angle = start + step * index as f64;
-      Point::new(cx + radius * angle.cos(), cy + radius * angle.sin())
-    })
-    .collect()
+  let mut entity = Entity {
+    layer: None,
+    style: Style::default(),
+    kind: EntityKind::Arc(ArcSegment {
+      center: Point::new(cx, cy),
+      radius,
+      start_angle: start,
+      end_angle: end,
+    }),
+    provenance: None,
+  };
+  apply_meta(&mut entity, meta);
+  entity
 }
 
 fn normalize_arc_sweep(start_deg: f64, end_deg: f64) -> (f64, f64) {
@@ -367,5 +405,24 @@ mod tests {
     let content = super::decode_text(&bytes);
     let drawing = parse_content(&content, None).unwrap();
     assert_eq!(drawing.sheets[0].entities.len(), 1);
+  }
+
+  #[test]
+  fn parses_professional_cnckad_fixture() {
+    let content = dft2dxf_testkit::professional_cnckad_dft();
+    let drawing = parse_content(&content, None).unwrap();
+    assert!(drawing.metadata.thickness.is_some());
+    assert!(drawing.metadata.k_factor.is_some());
+    assert!(drawing.cam.is_some());
+    assert!(drawing
+      .sheets[0]
+      .entities
+      .iter()
+      .any(|entity| matches!(entity.kind, EntityKind::Circle { .. })));
+    assert!(drawing
+      .sheets[0]
+      .entities
+      .iter()
+      .any(|entity| matches!(entity.kind, EntityKind::Arc(_))));
   }
 }

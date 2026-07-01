@@ -190,7 +190,9 @@ name = "ckad-reader"
 version = "0.1.0"
 dependencies = [
  "dft2dxf-testkit",
+ "drawing-dxf",
  "drawing-ir",
+ "drawing-svg",
  "tempfile",
  "thiserror",
 ]

@@ -7,4 +7,4 @@ mod error;
 mod writer;
 
 pub use error::{DxfError, DxfResult};
-pub use writer::write_drawing_to_file;
+pub use writer::{write_drawing_to_file, write_drawing_to_file_with_options, DxfWriteOptions};

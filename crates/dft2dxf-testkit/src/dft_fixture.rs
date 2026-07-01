@@ -143,6 +143,7 @@ fn compress_zlib(data: &[u8]) -> std::io::Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::emf_fixture;
   use tempfile::tempdir;
 
   #[test]

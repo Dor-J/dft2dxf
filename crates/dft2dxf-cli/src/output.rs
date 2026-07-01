@@ -100,3 +100,19 @@ pub fn render_validate(sheet_count: usize, format: OutputFormat) -> anyhow::Resu
   }
   Ok(())
 }
+
+/// Renders batch conversion summaries.
+pub fn render_convert_all<T: Serialize>(summaries: &[T], format: OutputFormat) -> anyhow::Result<()> {
+  match format {
+    OutputFormat::Human => {
+      for summary in summaries {
+        println!("{}", serde_json::to_string(summary)?);
+      }
+      println!("converted {} file(s)", summaries.len());
+    }
+    OutputFormat::Json => {
+      println!("{}", serde_json::to_string_pretty(summaries)?);
+    }
+  }
+  Ok(())
+}
