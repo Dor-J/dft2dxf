@@ -1,0 +1,23 @@
+[package]
+name = "drawing-dxf"
+description = "Write Drawing IR to interoperable DXF"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+drawing-ir = { workspace = true }
+dxf = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+dft2dxf-testkit = { workspace = true }
+dft-reader = { workspace = true }
+emf-reader = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true
