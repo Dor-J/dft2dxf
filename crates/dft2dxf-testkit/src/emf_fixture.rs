@@ -26,16 +26,20 @@ const EMR_LINETO: u32 = 54;
 const EMR_EXTTEXTOUTA: u32 = 83;
 
 /// Builds a minimal valid EMF containing one rectangle record.
+#[must_use]
 pub fn build_rectangle_emf(left: i32, top: i32, right: i32, bottom: i32) -> Vec<u8> {
   build_emf(&[rectangle_record(left, top, right, bottom)])
 }
 
 /// Builds an EMF with a polyline.
+#[must_use]
 pub fn build_polyline_emf(points: &[(i32, i32)]) -> Vec<u8> {
   build_emf(&[polyline_record(points)])
 }
 
 /// Builds an EMF with one arc entity.
+#[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn build_arc_emf(
   left: i32,
   top: i32,
@@ -52,10 +56,11 @@ pub fn build_arc_emf(
 }
 
 /// Builds an EMF with pen creation, selection, move, and line.
+#[must_use]
 pub fn build_pen_and_line_emf() -> Vec<u8> {
   let mut pen_payload = vec![0u8; 28];
   pen_payload[4..8].copy_from_slice(&1u32.to_le_bytes());
-  pen_payload[12..16].copy_from_slice(&0x0000_FFu32.to_le_bytes());
+  pen_payload[12..16].copy_from_slice(&0x0000_00FF_u32.to_le_bytes());
   pen_payload[16..20].copy_from_slice(&2i32.to_le_bytes());
 
   let mut select_payload = vec![0u8; 12];
@@ -78,6 +83,7 @@ pub fn build_pen_and_line_emf() -> Vec<u8> {
 }
 
 /// Builds an EMF with ASCII text output.
+#[must_use]
 pub fn build_text_emf(x: i32, y: i32, text: &str) -> Vec<u8> {
   let text_bytes = text.as_bytes();
   let payload_len = 24 + text_bytes.len() + 1;
@@ -90,6 +96,7 @@ pub fn build_text_emf(x: i32, y: i32, text: &str) -> Vec<u8> {
 }
 
 /// Builds an EMF with mapping mode set to low metric (triggers scale).
+#[must_use]
 pub fn build_transform_emf() -> Vec<u8> {
   let mut map_payload = vec![0u8; 12];
   map_payload[8..12].copy_from_slice(&8u32.to_le_bytes());
@@ -100,11 +107,13 @@ pub fn build_transform_emf() -> Vec<u8> {
 }
 
 /// Builds an EMF with a polygon.
+#[must_use]
 pub fn build_polygon_emf(points: &[(i32, i32)]) -> Vec<u8> {
   build_emf(&[polygon_record(points)])
 }
 
 /// Builds an EMF with an ellipse bounding box.
+#[must_use]
 pub fn build_ellipse_emf(left: i32, top: i32, right: i32, bottom: i32) -> Vec<u8> {
   build_emf(&[ellipse_record(left, top, right, bottom)])
 }
@@ -122,7 +131,7 @@ fn rectangle_record(left: i32, top: i32, right: i32, bottom: i32) -> (u32, Vec<u
 }
 
 fn polyline_record(points: &[(i32, i32)]) -> (u32, Vec<u8>) {
-  let count = points.len() as u32;
+  let count = usize_to_u32(points.len(), "point count");
   let mut payload = vec![0u8; 4 + points.len() * 8];
   payload[0..4].copy_from_slice(&count.to_le_bytes());
   let mut offset = 4usize;
@@ -148,6 +157,7 @@ fn ellipse_record(left: i32, top: i32, right: i32, bottom: i32) -> (u32, Vec<u8>
   (EMR_ELLIPSE, payload)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn arc_record(
   left: i32,
   top: i32,
@@ -175,7 +185,7 @@ fn build_emf(records: &[(u32, Vec<u8>)]) -> Vec<u8> {
   let eof_size = 20u32;
   let body_size: u32 = records
     .iter()
-    .map(|(_, payload)| 8 + payload.len() as u32)
+    .map(|(_, payload)| 8 + usize_to_u32(payload.len(), "EMF payload length"))
     .sum();
   let file_size = header_size + body_size + eof_size;
 
@@ -190,7 +200,7 @@ fn build_emf(records: &[(u32, Vec<u8>)]) -> Vec<u8> {
   }
 
   for (record_type, payload) in records {
-    let size = 8 + payload.len() as u32;
+    let size = 8 + usize_to_u32(payload.len(), "EMF payload length");
     append_record_header(&mut data, *record_type, size);
     data.extend_from_slice(payload);
   }
@@ -205,9 +215,23 @@ fn append_record_header(buf: &mut Vec<u8>, record_type: u32, size: u32) {
   buf.extend_from_slice(&size.to_le_bytes());
 }
 
+fn usize_to_u32(value: usize, context: &str) -> u32 {
+  u32::try_from(value).unwrap_or_else(|_| panic!("{context} does not fit in u32"))
+}
+
 /// Validates that bytes contain a valid EMF signature in the header record.
+#[must_use]
 pub fn is_emf(data: &[u8]) -> bool {
-  data.len() >= 44
-    && u32::from_le_bytes(data[0..4].try_into().unwrap()) == EMR_HEADER
-    && u32::from_le_bytes(data[40..44].try_into().unwrap()) == EMF_SIGNATURE
+  let Some(record_type) = data.get(0..4) else {
+    return false;
+  };
+  let Some(signature) = data.get(40..44) else {
+    return false;
+  };
+  let mut record_type_bytes = [0u8; 4];
+  record_type_bytes.copy_from_slice(record_type);
+  let mut signature_bytes = [0u8; 4];
+  signature_bytes.copy_from_slice(signature);
+  u32::from_le_bytes(record_type_bytes) == EMR_HEADER
+    && u32::from_le_bytes(signature_bytes) == EMF_SIGNATURE
 }

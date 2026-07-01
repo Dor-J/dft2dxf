@@ -53,6 +53,10 @@ pub fn ci_fixtures_dir() -> PathBuf {
 }
 
 /// Writes CI fixture files when missing (idempotent).
+///
+/// # Errors
+///
+/// Returns an I/O error if fixture directories or files cannot be created.
 pub fn ensure_ci_fixtures() -> std::io::Result<()> {
   use crate::{build_minimal_dft, build_rectangle_emf, write_minimal_cnckad_dft, MinimalDftSpec};
 
@@ -85,9 +89,8 @@ pub fn discover_valid_dft_fixtures(use_local: bool) -> Vec<PathBuf> {
 }
 
 fn discover_dft_files_in_dir(dir: &Path) -> Vec<PathBuf> {
-  let entries = match std::fs::read_dir(dir) {
-    Ok(value) => value,
-    Err(_) => return Vec::new(),
+  let Ok(entries) = std::fs::read_dir(dir) else {
+    return Vec::new();
   };
 
   let mut files: Vec<PathBuf> = entries

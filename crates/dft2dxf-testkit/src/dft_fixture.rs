@@ -63,6 +63,11 @@ impl MinimalDftSpec {
 }
 
 /// Writes a synthetic `.dft` compound file to `path`.
+///
+/// # Errors
+///
+/// Returns an I/O error if the compound file, storage, metadata stream, or sheet streams cannot
+/// be created or written.
 pub fn build_minimal_dft(path: &Path, spec: &MinimalDftSpec) -> std::io::Result<()> {
   if let Some(parent) = path.parent() {
     if !parent.as_os_str().is_empty() {
@@ -90,27 +95,27 @@ fn write_document_info(
 ) -> std::io::Result<()> {
   let mut data = Vec::new();
   data.extend_from_slice(&1u32.to_le_bytes()); // viewer_info_version
-  data.extend_from_slice(&(spec.sheets.len() as i32).to_le_bytes());
+  data.extend_from_slice(&usize_to_i32(spec.sheets.len(), "sheet count")?.to_le_bytes());
   data.extend_from_slice(&0i32.to_le_bytes()); // active_sheet_index
   data.extend_from_slice(&1u32.to_le_bytes()); // geometric_version
   data.extend_from_slice(&0x003Du16.to_le_bytes()); // millimeters
 
   for sheet in &spec.sheets {
     let name_utf16: Vec<u16> = sheet.name.encode_utf16().collect();
-    data.extend_from_slice(&(name_utf16.len() as i32).to_le_bytes());
+    data.extend_from_slice(&usize_to_i32(name_utf16.len(), "sheet name length")?.to_le_bytes());
     for unit in name_utf16 {
       data.extend_from_slice(&unit.to_le_bytes());
     }
     data.extend_from_slice(&sheet.width.to_le_bytes());
     data.extend_from_slice(&sheet.height.to_le_bytes());
-    let emf_size = sheet.emf.len() as u32;
+    let emf_size = usize_to_u32(sheet.emf.len(), "EMF size")?;
     let compressed = if let Some(payload) = &sheet.compressed_override {
       payload.clone()
     } else {
       compress_zlib(&sheet.emf)?
     };
     data.extend_from_slice(&emf_size.to_le_bytes());
-    data.extend_from_slice(&(compressed.len() as u32).to_le_bytes());
+    data.extend_from_slice(&usize_to_u32(compressed.len(), "compressed EMF size")?.to_le_bytes());
   }
 
   let mut stream = compound.create_stream("JDraftViewerInfo/JDraftDocumentInfo")?;
@@ -138,6 +143,24 @@ fn compress_zlib(data: &[u8]) -> std::io::Result<Vec<u8>> {
   let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
   encoder.write_all(data)?;
   encoder.finish()
+}
+
+fn usize_to_i32(value: usize, context: &str) -> std::io::Result<i32> {
+  i32::try_from(value).map_err(|_| {
+    std::io::Error::new(
+      std::io::ErrorKind::InvalidInput,
+      format!("{context} does not fit in i32"),
+    )
+  })
+}
+
+fn usize_to_u32(value: usize, context: &str) -> std::io::Result<u32> {
+  u32::try_from(value).map_err(|_| {
+    std::io::Error::new(
+      std::io::ErrorKind::InvalidInput,
+      format!("{context} does not fit in u32"),
+    )
+  })
 }
 
 #[cfg(test)]

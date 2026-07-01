@@ -110,11 +110,19 @@ pub fn professional_cnckad_dft() -> String {
 }
 
 /// Writes a minimal cncKad `.dft` file to `path`.
+///
+/// # Errors
+///
+/// Returns an I/O error if `path` cannot be written.
 pub fn write_minimal_cnckad_dft(path: &std::path::Path) -> std::io::Result<()> {
   std::fs::write(path, minimal_cnckad_dft())
 }
 
 /// Writes the professional cncKad fixture to `path`.
+///
+/// # Errors
+///
+/// Returns an I/O error if `path` cannot be written.
 pub fn write_professional_cnckad_dft(path: &std::path::Path) -> std::io::Result<()> {
   std::fs::write(path, professional_cnckad_dft())
 }
