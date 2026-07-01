@@ -1,0 +1,9 @@
+/target
+**/*.rs.bk
+*.emf
+*.dft
+.DS_Store
+Thumbs.db
+/fuzz/target
+/cargo-deny.log
+*.snap.new

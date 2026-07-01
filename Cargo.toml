@@ -1,0 +1,53 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/dft2dxf-cli",
+  "crates/dft-reader",
+  "crates/emf-reader",
+  "crates/drawing-ir",
+  "crates/drawing-svg",
+  "crates/drawing-dxf",
+  "crates/dft2dxf-testkit",
+]
+
+exclude = ["fuzz"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.88"
+authors = ["dft2dxf contributors"]
+repository = "https://github.com/dft2dxf/dft2dxf"
+
+[workspace.dependencies]
+cfb = "0.14"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+thiserror = "2"
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+svg = "0.18"
+dxf = "0.6"
+insta = { version = "1", features = ["json"] }
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"
+
+dft-reader = { path = "crates/dft-reader" }
+emf-reader = { path = "crates/emf-reader" }
+drawing-ir = { path = "crates/drawing-ir" }
+drawing-svg = { path = "crates/drawing-svg" }
+drawing-dxf = { path = "crates/drawing-dxf" }
+dft2dxf-testkit = { path = "crates/dft2dxf-testkit" }
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
