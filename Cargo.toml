@@ -38,13 +38,13 @@ assert_cmd = "2"
 predicates = "3"
 tempfile = "3"
 
-dft-reader = { path = "crates/dft-reader" }
-emf-reader = { path = "crates/emf-reader" }
-drawing-ir = { path = "crates/drawing-ir" }
-drawing-svg = { path = "crates/drawing-svg" }
-drawing-dxf = { path = "crates/drawing-dxf" }
-dft2dxf-testkit = { path = "crates/dft2dxf-testkit" }
-ckad-reader = { path = "crates/ckad-reader" }
+dft-reader = { version = "0.1.0", path = "crates/dft-reader" }
+emf-reader = { version = "0.1.0", path = "crates/emf-reader" }
+drawing-ir = { version = "0.1.0", path = "crates/drawing-ir" }
+drawing-svg = { version = "0.1.0", path = "crates/drawing-svg" }
+drawing-dxf = { version = "0.1.0", path = "crates/drawing-dxf" }
+dft2dxf-testkit = { version = "0.1.0", path = "crates/dft2dxf-testkit" }
+ckad-reader = { version = "0.1.0", path = "crates/ckad-reader" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -11,8 +11,9 @@ cd "$ROOT"
 ENFORCE="${COVERAGE_ENFORCE:-1}"
 FAIL_UNDER="${COVERAGE_FAIL_UNDER:-80}"
 
+mkdir -p target/coverage
+
 ARGS=(
-  llvm-cov
   --workspace
   --exclude dft2dxf-testkit
   --all-features
