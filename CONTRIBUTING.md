@@ -7,6 +7,24 @@ Thank you for contributing.
 1. Install Rust 1.88+ and platform linker tooling.
 2. Clone the repository.
 3. Run `cargo build`, `cargo test`, `cargo clippy --all-targets`, and `cargo fmt --all`.
+4. Run `bash scripts/check-safe-rust.sh` (or `pwsh scripts/check-safe-rust.ps1` on Windows) before pushing.
+
+## Safe Rust policy
+
+This project is **100% safe Rust**. The following are forbidden in all project code
+(`crates/` and `fuzz/`):
+
+- `unsafe` blocks, functions, traits, or impls
+- raw pointers (`*const T`, `*mut T`)
+- `use std::any::Any;`
+- `use std::ffi::c_void;`
+
+Enforcement:
+
+- `#![forbid(unsafe_code)]` via workspace `Cargo.toml` lints
+- CI runs `scripts/check-safe-rust.sh` on every platform
+
+Third-party dependencies may use `unsafe` internally; project code must not.
 
 ## Commit style
 

@@ -45,7 +45,7 @@ drawing-dxf = { path = "crates/drawing-dxf" }
 dft2dxf-testkit = { path = "crates/dft2dxf-testkit" }
 
 [workspace.lints.rust]
-unsafe_code = "warn"
+unsafe_code = "forbid"
 missing_docs = "warn"
 
 [workspace.lints.clippy]

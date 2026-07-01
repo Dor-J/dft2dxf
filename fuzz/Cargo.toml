@@ -32,3 +32,6 @@ path = "fuzz_targets/fuzz_zlib_decompress.rs"
 test = false
 doc = false
 bench = false
+
+[lints.rust]
+unsafe_code = "forbid"

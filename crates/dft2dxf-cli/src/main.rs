@@ -1,5 +1,7 @@
 //! `dft2dxf` command-line interface.
 
+#![forbid(unsafe_code)]
+
 mod output;
 
 use std::path::PathBuf;

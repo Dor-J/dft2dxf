@@ -1,5 +1,6 @@
 //! Write Drawing IR to DXF.
 
+#![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 mod error;

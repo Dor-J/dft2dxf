@@ -1,5 +1,6 @@
 //! Parse EMF records and replay graphics state into Drawing IR.
 
+#![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 mod error;

@@ -1,5 +1,6 @@
 //! Synthetic fixtures for dft2dxf tests.
 
+#![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 mod dft_fixture;

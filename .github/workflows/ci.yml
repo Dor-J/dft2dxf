@@ -19,6 +19,9 @@ jobs:
         with:
           toolchain: 1.88
           components: rustfmt, clippy
+      - name: Enforce safe Rust policy
+        shell: bash
+        run: bash scripts/check-safe-rust.sh
       - name: Format
         run: cargo fmt --all -- --check
       - name: Clippy

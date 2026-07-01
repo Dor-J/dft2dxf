@@ -1,6 +1,7 @@
 //! Read Solid Edge `.dft` draft files as Compound File Binary containers and
 //! extract embedded viewer EMF sheet streams.
 
+#![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 mod cfb;
