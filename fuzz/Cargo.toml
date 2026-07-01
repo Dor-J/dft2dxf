@@ -1,0 +1,34 @@
+[package]
+name = "dft2dxf-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+dft-reader = { path = "../crates/dft-reader" }
+emf-reader = { path = "../crates/emf-reader" }
+
+[[bin]]
+name = "fuzz_dft_metadata"
+path = "fuzz_targets/fuzz_dft_metadata.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_emf_records"
+path = "fuzz_targets/fuzz_emf_records.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_zlib_decompress"
+path = "fuzz_targets/fuzz_zlib_decompress.rs"
+test = false
+doc = false
+bench = false
