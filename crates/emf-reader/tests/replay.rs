@@ -1,9 +1,9 @@
 //! EMF replay tests for extended record types.
 
-use drawing_ir::EntityKind;
 use dft2dxf_testkit::{
   build_arc_emf, build_pen_and_line_emf, build_polyline_emf, build_text_emf, build_transform_emf,
 };
+use drawing_ir::EntityKind;
 use emf_reader::{
   replay_to_drawing, EmfDocument, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE,
 };

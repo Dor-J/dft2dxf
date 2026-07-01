@@ -66,7 +66,10 @@ impl EntityMeta {
         None
       }
     });
-    Self { layer_id, color_aci }
+    Self {
+      layer_id,
+      color_aci,
+    }
   }
 
   /// Returns a layer name for DXF/SVG export.
@@ -78,10 +81,7 @@ impl EntityMeta {
   /// Returns a style from metadata when color is known.
   #[must_use]
   pub fn style(&self) -> Style {
-    self
-      .color_aci
-      .map(style_from_aci)
-      .unwrap_or_default()
+    self.color_aci.map(style_from_aci).unwrap_or_default()
   }
 }
 

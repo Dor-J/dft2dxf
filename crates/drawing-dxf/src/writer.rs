@@ -7,8 +7,8 @@ use drawing_ir::{
   ArcSegment, CamOperation, DimensionKind, Drawing, Entity, EntityKind, PaperUnit, Point,
 };
 use dxf::entities::{Arc, Circle, Entity as DxfEntity, EntityType, Line, LwPolyline, Text};
-use dxf::tables::Layer;
 use dxf::enums::{DrawingUnits, Units};
+use dxf::tables::Layer;
 use dxf::{Color, Drawing as DxfDrawing, LwPolylineVertex, Point as DxfPoint};
 
 use crate::error::{DxfError, DxfResult};
@@ -143,8 +143,8 @@ fn include_entity_bounds(entity: &Entity, bounds: &mut drawing_ir::BoundingBox) 
     }
     EntityKind::Path(path) => {
       for segment in &path.segments {
-        if let drawing_ir::PathSegment::MoveTo { to }
-        | drawing_ir::PathSegment::LineTo { to } = segment
+        if let drawing_ir::PathSegment::MoveTo { to } | drawing_ir::PathSegment::LineTo { to } =
+          segment
         {
           bounds.include_point(*to);
         }
@@ -281,17 +281,18 @@ fn map_dimension(kind: &DimensionKind, entity: &Entity) -> Option<DxfEntity> {
       apply_entity_style(&mut dxf_entity, entity);
       if let Some(label) = text {
         let mut dxf_text = Text::default();
-        dxf_text.location = dxf_point(&Point::new(
-          (from.x + to.x) * 0.5,
-          (from.y + to.y) * 0.5,
-        ));
+        dxf_text.location = dxf_point(&Point::new((from.x + to.x) * 0.5, (from.y + to.y) * 0.5));
         dxf_text.value = label.clone();
         dxf_text.text_height = 2.5;
         return Some(DxfEntity::new(EntityType::Text(dxf_text)));
       }
       Some(dxf_entity)
     }
-    DimensionKind::Radial { center, radius, text } => {
+    DimensionKind::Radial {
+      center,
+      radius,
+      text,
+    } => {
       let mut circle = Circle::default();
       circle.center = dxf_point(center);
       circle.radius = *radius;

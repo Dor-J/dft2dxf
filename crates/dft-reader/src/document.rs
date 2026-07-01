@@ -114,9 +114,7 @@ impl DftDocument {
       path,
       storage,
       document_info: parsed.as_ref().map(|value| value.document_info.clone()),
-      sheets: parsed
-        .map(|value| value.sheets.clone())
-        .unwrap_or_default(),
+      sheets: parsed.map(|value| value.sheets.clone()).unwrap_or_default(),
     })
   }
 

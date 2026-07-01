@@ -1,11 +1,11 @@
 mod fixtures;
 
-use fixtures::multi_entity_drawing;
 use dft2dxf_testkit::{build_minimal_dft, build_rectangle_emf, MinimalDftSpec};
 use drawing_dxf::write_drawing_to_file;
 use emf_reader::{
   replay_to_drawing, EmfDocument, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE,
 };
+use fixtures::multi_entity_drawing;
 
 #[test]
 fn writes_dxf_with_entities() {
@@ -52,9 +52,7 @@ fn dxf_output_contains_lwpolyline_entities() {
   write_drawing_to_file(&mut drawing, &dxf_path).unwrap();
   let content = std::fs::read_to_string(&dxf_path).unwrap();
   assert!(
-    content.contains("LWPOLYLINE")
-      || content.contains("POLYLINE")
-      || content.contains("LINE")
+    content.contains("LWPOLYLINE") || content.contains("POLYLINE") || content.contains("LINE")
   );
 }
 
@@ -127,8 +125,8 @@ fn emits_native_circle_entities() {
 #[test]
 fn emits_cam_layers_when_enabled() {
   use ckad_reader::parse_content;
-  use drawing_dxf::{write_drawing_to_file_with_options, DxfWriteOptions};
   use dft2dxf_testkit::professional_cnckad_dft;
+  use drawing_dxf::{write_drawing_to_file_with_options, DxfWriteOptions};
 
   let mut drawing = parse_content(&professional_cnckad_dft(), None).unwrap();
   let dir = tempfile::tempdir().unwrap();
@@ -136,9 +134,7 @@ fn emits_cam_layers_when_enabled() {
   write_drawing_to_file_with_options(
     &mut drawing,
     &dxf_path,
-    DxfWriteOptions {
-      include_cam: true,
-    },
+    DxfWriteOptions { include_cam: true },
   )
   .unwrap();
   let content = std::fs::read_to_string(&dxf_path).unwrap();

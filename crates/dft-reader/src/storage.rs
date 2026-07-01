@@ -106,10 +106,7 @@ fn walk_storage<R: Read + Seek>(
   entries: &mut Vec<StorageEntry>,
   entry_count: &mut u32,
 ) -> DftResult<()> {
-  for entry in compound
-    .walk_storage("/")
-    .map_err(DftError::CompoundFile)?
-  {
+  for entry in compound.walk_storage("/").map_err(DftError::CompoundFile)? {
     if entry.is_root() {
       continue;
     }

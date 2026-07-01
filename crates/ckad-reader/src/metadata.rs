@@ -17,7 +17,9 @@ pub fn parse_part_section(lines: &[String]) -> (Option<String>, Option<String>) 
 }
 
 /// Parses section `[200]` for sheet extents, scale, and material hints.
-pub fn parse_sheet_section(lines: &[String]) -> CkadResult<(Option<f64>, Option<f64>, DrawingMetadata)> {
+pub fn parse_sheet_section(
+  lines: &[String],
+) -> CkadResult<(Option<f64>, Option<f64>, DrawingMetadata)> {
   let mut metadata = DrawingMetadata::default();
   metadata.units = PaperUnit::Millimeters;
   let mut width = None;
@@ -83,10 +85,12 @@ fn parse_floats(line: &str) -> CkadResult<Vec<f64>> {
   line
     .split_whitespace()
     .map(|token| {
-      token.parse::<f64>().map_err(|err| CkadError::InvalidFormat {
-        context: "numeric token".to_string(),
-        message: format!("invalid float {token:?}: {err}"),
-      })
+      token
+        .parse::<f64>()
+        .map_err(|err| CkadError::InvalidFormat {
+          context: "numeric token".to_string(),
+          message: format!("invalid float {token:?}: {err}"),
+        })
     })
     .collect()
 }

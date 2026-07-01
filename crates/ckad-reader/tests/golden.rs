@@ -41,8 +41,5 @@ fn professional_cnckad_cam_json_structure() {
 #[test]
 fn professional_cnckad_entities_have_layers() {
   let drawing = parse_content(&professional_cnckad_dft(), None).unwrap();
-  assert!(drawing.sheets[0]
-    .entities
-    .iter()
-    .any(|e| e.layer.is_some()));
+  assert!(drawing.sheets[0].entities.iter().any(|e| e.layer.is_some()));
 }

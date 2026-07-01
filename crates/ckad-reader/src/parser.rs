@@ -3,16 +3,14 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use drawing_ir::{
-  ArcSegment, Drawing, Entity, EntityKind, Point, Sheet, Style,
-};
+use drawing_ir::{ArcSegment, Drawing, Entity, EntityKind, Point, Sheet, Style};
 
 use crate::cam::parse_cam;
 use crate::error::{CkadError, CkadResult};
 use crate::metadata::{
   parse_kfactor_section, parse_part_section, parse_sheet_section, parse_thickness_sections,
 };
-use crate::style::{EntityMeta, inline_color, inline_layer_id};
+use crate::style::{inline_color, inline_layer_id, EntityMeta};
 
 /// Default maximum input file size (50 MiB).
 pub const DEFAULT_MAX_FILE_SIZE: u64 = 50 * 1024 * 1024;
@@ -157,11 +155,7 @@ fn parse_geometry_section(lines: &[String], context: &str) -> CkadResult<Vec<Ent
           let meta = read_metadata_line(&lines, &mut index);
           if coords.len() >= 4 {
             entities.push(line_entity(
-              coords[0],
-              coords[1],
-              coords[2],
-              coords[3],
-              meta,
+              coords[0], coords[1], coords[2], coords[3], meta,
             ));
           }
         }
@@ -193,12 +187,7 @@ fn parse_geometry_section(lines: &[String], context: &str) -> CkadResult<Vec<Ent
           let meta = entity_meta_from_inline(&header);
           let (start_deg, end_deg) = read_arc_angles(&lines, &mut index, context)?;
           entities.push(arc_entity(
-            header[0],
-            header[1],
-            header[2],
-            start_deg,
-            end_deg,
-            meta,
+            header[0], header[1], header[2], start_deg, end_deg, meta,
           ));
         }
       }
@@ -208,11 +197,7 @@ fn parse_geometry_section(lines: &[String], context: &str) -> CkadResult<Vec<Ent
   Ok(entities)
 }
 
-fn read_arc_angles(
-  lines: &[String],
-  index: &mut usize,
-  context: &str,
-) -> CkadResult<(f64, f64)> {
+fn read_arc_angles(lines: &[String], index: &mut usize, context: &str) -> CkadResult<(f64, f64)> {
   skip_extension_lines(lines, index);
   let next = read_float_line(lines, index, context)?;
   if next.len() >= 4 {
@@ -235,12 +220,10 @@ fn read_arc_angles(
 }
 
 fn read_count(lines: &[String], index: &mut usize, context: &str) -> CkadResult<usize> {
-  let line = lines
-    .get(*index)
-    .ok_or_else(|| CkadError::InvalidFormat {
-      context: context.to_string(),
-      message: "missing entity count".to_string(),
-    })?;
+  let line = lines.get(*index).ok_or_else(|| CkadError::InvalidFormat {
+    context: context.to_string(),
+    message: "missing entity count".to_string(),
+  })?;
   let count = line
     .trim()
     .parse::<usize>()
@@ -254,12 +237,10 @@ fn read_count(lines: &[String], index: &mut usize, context: &str) -> CkadResult<
 
 fn read_float_line(lines: &[String], index: &mut usize, context: &str) -> CkadResult<Vec<f64>> {
   skip_extension_lines(lines, index);
-  let line = lines
-    .get(*index)
-    .ok_or_else(|| CkadError::InvalidFormat {
-      context: context.to_string(),
-      message: "unexpected end of geometry section".to_string(),
-    })?;
+  let line = lines.get(*index).ok_or_else(|| CkadError::InvalidFormat {
+    context: context.to_string(),
+    message: "unexpected end of geometry section".to_string(),
+  })?;
   if line.starts_with("OLE4DM") {
     return Err(CkadError::InvalidFormat {
       context: context.to_string(),
@@ -302,10 +283,12 @@ fn parse_floats(line: &str) -> CkadResult<Vec<f64>> {
   line
     .split_whitespace()
     .map(|token| {
-      token.parse::<f64>().map_err(|err| CkadError::InvalidFormat {
-        context: "numeric token".to_string(),
-        message: format!("invalid float {token:?}: {err}"),
-      })
+      token
+        .parse::<f64>()
+        .map_err(|err| CkadError::InvalidFormat {
+          context: "numeric token".to_string(),
+          message: format!("invalid float {token:?}: {err}"),
+        })
     })
     .collect()
 }
@@ -414,13 +397,11 @@ mod tests {
     assert!(drawing.metadata.thickness.is_some());
     assert!(drawing.metadata.k_factor.is_some());
     assert!(drawing.cam.is_some());
-    assert!(drawing
-      .sheets[0]
+    assert!(drawing.sheets[0]
       .entities
       .iter()
       .any(|entity| matches!(entity.kind, EntityKind::Circle { .. })));
-    assert!(drawing
-      .sheets[0]
+    assert!(drawing.sheets[0]
       .entities
       .iter()
       .any(|entity| matches!(entity.kind, EntityKind::Arc(_))));

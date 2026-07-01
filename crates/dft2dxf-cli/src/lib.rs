@@ -319,15 +319,9 @@ fn cmd_convert(
       }
       cmd_convert_cnckad(input, output, svg_preview, limits, cam_json, units)
     }
-    DftContainerFormat::SolidEdgeCompound => cmd_convert_solid_edge(
-      input,
-      output,
-      sheet,
-      svg_preview,
-      limits,
-      cam_json,
-      units,
-    ),
+    DftContainerFormat::SolidEdgeCompound => {
+      cmd_convert_solid_edge(input, output, sheet, svg_preview, limits, cam_json, units)
+    }
   }
 }
 
@@ -499,12 +493,17 @@ pub fn discover_dft_files(dir: &Path) -> Result<Vec<PathBuf>> {
 
 fn load_drawing_for_summary(input: &Path, limits: Limits) -> Result<drawing_ir::Drawing> {
   match sniff_format(input)? {
-    DftContainerFormat::CncKad => read_to_drawing(input, limits.max_file_size)
-      .map_err(|err| anyhow::anyhow!(err.to_string())),
+    DftContainerFormat::CncKad => {
+      read_to_drawing(input, limits.max_file_size).map_err(|err| anyhow::anyhow!(err.to_string()))
+    }
     DftContainerFormat::SolidEdgeCompound => {
       let mut document =
         DftDocument::open_with_options(input, DftOpenOptions::new().with_limits(limits))?;
-      let index = document.sheets()?.first().map(|sheet| sheet.index).unwrap_or(1);
+      let index = document
+        .sheets()?
+        .first()
+        .map(|sheet| sheet.index)
+        .unwrap_or(1);
       let sheet_meta = document.sheet(index)?;
       let emf = document.extract_emf(index)?;
       let emf_doc = emf_reader::EmfDocument::parse(
@@ -526,7 +525,11 @@ fn load_drawing_for_summary(input: &Path, limits: Limits) -> Result<drawing_ir::
 /// Builds a conversion summary from a loaded drawing.
 #[must_use]
 pub fn summarize_drawing(input: &Path, drawing: &drawing_ir::Drawing) -> ConvertSummary {
-  let entities: usize = drawing.sheets.iter().map(|sheet| sheet.entities.len()).sum();
+  let entities: usize = drawing
+    .sheets
+    .iter()
+    .map(|sheet| sheet.entities.len())
+    .sum();
   let layers: usize = drawing
     .sheets
     .iter()
@@ -586,7 +589,11 @@ fn cmd_inspect_cnckad(input: &PathBuf, limits: Limits, format: OutputFormat) -> 
 fn cmd_validate_cnckad(input: &PathBuf, limits: Limits, format: OutputFormat) -> Result<()> {
   let drawing = read_to_drawing(input, limits.max_file_size)
     .with_context(|| format!("failed to read cncKad file {}", input.display()))?;
-  let entity_count: usize = drawing.sheets.iter().map(|sheet| sheet.entities.len()).sum();
+  let entity_count: usize = drawing
+    .sheets
+    .iter()
+    .map(|sheet| sheet.entities.len())
+    .sum();
   if entity_count == 0 {
     anyhow::bail!("no geometry entities found in cncKad file");
   }
@@ -596,8 +603,8 @@ fn cmd_validate_cnckad(input: &PathBuf, limits: Limits, format: OutputFormat) ->
 
 /// Detects `.dft` container format from the file header.
 pub fn sniff_format(path: &Path) -> Result<DftContainerFormat> {
-  let mut file = std::fs::File::open(path)
-    .with_context(|| format!("failed to open {}", path.display()))?;
+  let mut file =
+    std::fs::File::open(path).with_context(|| format!("failed to open {}", path.display()))?;
   let mut header = [0u8; 12];
   file
     .read_exact(&mut header)

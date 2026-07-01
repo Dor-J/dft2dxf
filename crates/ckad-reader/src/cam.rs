@@ -151,8 +151,14 @@ fn parse_err(context: &str, line: &str, message: String) -> CkadError {
 }
 
 /// Parses CAM sections into a [`CamProgram`].
-pub fn parse_cam(tools: Option<&[String]>, operations: Option<&[String]>) -> CkadResult<CamProgram> {
-  let tools = tools.map(parse_tool_section).transpose()?.unwrap_or_default();
+pub fn parse_cam(
+  tools: Option<&[String]>,
+  operations: Option<&[String]>,
+) -> CkadResult<CamProgram> {
+  let tools = tools
+    .map(parse_tool_section)
+    .transpose()?
+    .unwrap_or_default();
   let operations = operations
     .map(parse_operations_section)
     .transpose()?

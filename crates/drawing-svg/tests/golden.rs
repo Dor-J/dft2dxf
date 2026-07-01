@@ -2,9 +2,9 @@ use std::path::PathBuf;
 
 mod fixtures;
 
-use fixtures::multi_entity_drawing;
 use drawing_ir::{EntityKind, PathSegment, Point};
 use drawing_svg::write_drawing_to_string;
+use fixtures::multi_entity_drawing;
 
 fn golden_svg_dir() -> PathBuf {
   PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/svg")

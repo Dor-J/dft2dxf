@@ -6,7 +6,9 @@ use std::path::Path as FsPath;
 
 use drawing_ir::{BoundingBox, EntityKind, PathSegment, Point};
 use svg::node::element::path::Data;
-use svg::node::element::{Circle, Group, Line, Path as SvgPath, Polygon, Polyline, Text as SvgText};
+use svg::node::element::{
+  Circle, Group, Line, Path as SvgPath, Polygon, Polyline, Text as SvgText,
+};
 use svg::node::{Text as TextNode, Value};
 use svg::Document;
 
@@ -294,7 +296,15 @@ fn render_entity(entity: &drawing_ir::Entity, flip_offset: f64) -> Group {
           .set("y", fmt(position.y))
           .set("fill", stroke)
           .set("font-size", fmt(text.font_size.max(0.1)))
-          .set("transform", format!("rotate({} {} {})", text.rotation_deg, fmt(position.x), fmt(position.y)))
+          .set(
+            "transform",
+            format!(
+              "rotate({} {} {})",
+              text.rotation_deg,
+              fmt(position.x),
+              fmt(position.y)
+            ),
+          )
           .add(TextNode::new(text.text.as_str())),
       )
     }

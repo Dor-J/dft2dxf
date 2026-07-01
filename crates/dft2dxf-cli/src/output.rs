@@ -81,7 +81,10 @@ pub fn render_cnckad_inspect(
   drawing: &drawing_ir::Drawing,
   format: OutputFormat,
 ) -> anyhow::Result<()> {
-  print!("{}", render_cnckad_inspect_to_string(path, drawing, format)?);
+  print!(
+    "{}",
+    render_cnckad_inspect_to_string(path, drawing, format)?
+  );
   Ok(())
 }
 
@@ -125,7 +128,10 @@ pub fn render_validate_to_string(sheet_count: usize, format: OutputFormat) -> St
 }
 
 /// Renders batch conversion summaries to stdout.
-pub fn render_convert_all<T: Serialize>(summaries: &[T], format: OutputFormat) -> anyhow::Result<()> {
+pub fn render_convert_all<T: Serialize>(
+  summaries: &[T],
+  format: OutputFormat,
+) -> anyhow::Result<()> {
   print!("{}", render_convert_all_to_string(summaries, format)?);
   Ok(())
 }

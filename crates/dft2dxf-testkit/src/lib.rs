@@ -15,8 +15,8 @@ pub use cnckad_fixture::{
 };
 pub use dft_fixture::{build_minimal_dft, MinimalDftSpec, SheetSpec};
 pub use emf_fixture::{
-  build_arc_emf, build_ellipse_emf, build_pen_and_line_emf, build_polygon_emf,
-  build_polyline_emf, build_rectangle_emf, build_text_emf, build_transform_emf, is_emf,
+  build_arc_emf, build_ellipse_emf, build_pen_and_line_emf, build_polygon_emf, build_polyline_emf,
+  build_rectangle_emf, build_text_emf, build_transform_emf, is_emf,
 };
 pub use fixture_paths::{
   active_valid_fixtures_dir, ci_fixtures_dir, discover_valid_dft_fixtures, ensure_ci_fixtures,

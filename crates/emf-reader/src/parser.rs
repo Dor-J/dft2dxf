@@ -43,7 +43,9 @@ impl EmfRecord {
   pub fn class(&self) -> RecordClass {
     match self.record_type {
       1 | 14 | 17 | 35 | 36 | 37 | 38 | 82 | 95 => RecordClass::Control,
-      4 | 5 | 27 | 42 | 45 | 46 | 47 | 49 | 54 | 55 | 83 | 84 | 86 | 87 | 88 => RecordClass::Drawing,
+      4 | 5 | 27 | 42 | 45 | 46 | 47 | 49 | 54 | 55 | 83 | 84 | 86 | 87 | 88 => {
+        RecordClass::Drawing
+      }
       EMR_EOF => RecordClass::Eof,
       _ => RecordClass::Unsupported,
     }

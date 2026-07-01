@@ -158,11 +158,7 @@ fn convert_all_cam_json_sidecar() {
   let dir = tempfile::tempdir().unwrap();
   let input_dir = dir.path().join("in");
   std::fs::create_dir_all(&input_dir).unwrap();
-  std::fs::write(
-    input_dir.join("pro.dft"),
-    professional_cnckad_dft(),
-  )
-  .unwrap();
+  std::fs::write(input_dir.join("pro.dft"), professional_cnckad_dft()).unwrap();
   let dxf_dir = dir.path().join("dxf");
   let svg_dir = dir.path().join("svg");
 

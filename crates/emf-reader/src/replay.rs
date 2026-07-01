@@ -9,9 +9,9 @@ use drawing_ir::{
 
 use crate::parser::{EmfDocument, EmfRecord};
 use crate::record::{
-  EMR_ARC, EMR_ARCTO, EMR_CHORD, EMR_CREATEPEN, EMR_ELLIPSE, EMR_EXTTEXTOUTA, EMR_EXTTEXTOUTW,
-  EMR_EXTCREATEFONTINDIRECTW, EMR_EXTCREATEPEN, EMR_LINETO, EMR_MODIFYWORLDTRANSFORM,
-  EMR_MOVETOEX, EMR_PIE, EMR_POLYGON, EMR_POLYGON16, EMR_POLYBEZIER16, EMR_POLYLINE,
+  EMR_ARC, EMR_ARCTO, EMR_CHORD, EMR_CREATEPEN, EMR_ELLIPSE, EMR_EXTCREATEFONTINDIRECTW,
+  EMR_EXTCREATEPEN, EMR_EXTTEXTOUTA, EMR_EXTTEXTOUTW, EMR_LINETO, EMR_MODIFYWORLDTRANSFORM,
+  EMR_MOVETOEX, EMR_PIE, EMR_POLYBEZIER16, EMR_POLYGON, EMR_POLYGON16, EMR_POLYLINE,
   EMR_POLYLINE16, EMR_RECTANGLE, EMR_SELECTOBJECT, EMR_SETMAPMODE, EMR_SETWORLDTRANSFORM,
 };
 
@@ -118,16 +118,16 @@ pub fn replay_to_drawing(
       }
       EMR_POLYBEZIER16 => {
         if let Some(path) = parse_polybezier16(record, scale_x, scale_y) {
-          sheet.entities.push(styled_entity(
-            EntityKind::Path(path),
-            &stroke,
-            record,
-          ));
+          sheet
+            .entities
+            .push(styled_entity(EntityKind::Path(path), &stroke, record));
         }
       }
       EMR_ARC | EMR_ARCTO | EMR_CHORD | EMR_PIE => {
         if let Some(arc) = parse_arc(record, scale_x, scale_y) {
-          sheet.entities.push(styled_entity(EntityKind::Arc(arc), &stroke, record));
+          sheet
+            .entities
+            .push(styled_entity(EntityKind::Arc(arc), &stroke, record));
         }
       }
       EMR_ELLIPSE => {
@@ -369,9 +369,8 @@ fn parse_arc(record: &EmfRecord, scale_x: f64, scale_y: f64) -> Option<ArcSegmen
     scale_x,
     scale_y,
   );
-  let radius = ((right - left).abs().max((bottom - top).abs()) * 0.5)
-    * scale_x.abs()
-    .max(scale_y.abs());
+  let radius =
+    ((right - left).abs().max((bottom - top).abs()) * 0.5) * scale_x.abs().max(scale_y.abs());
   let start = scale_point(Point::new(start_x, start_y), scale_x, scale_y);
   let end = scale_point(Point::new(end_x, end_y), scale_x, scale_y);
   let start_angle = (start.y - center.y).atan2(start.x - center.x);
@@ -400,9 +399,8 @@ fn parse_ellipse(record: &EmfRecord, scale_x: f64, scale_y: f64) -> Option<(Poin
     scale_x,
     scale_y,
   );
-  let radius = ((right - left).abs().max((bottom - top).abs()) * 0.5)
-    * scale_x.abs()
-    .max(scale_y.abs());
+  let radius =
+    ((right - left).abs().max((bottom - top).abs()) * 0.5) * scale_x.abs().max(scale_y.abs());
   Some((center, radius))
 }
 
