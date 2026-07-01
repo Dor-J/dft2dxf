@@ -34,6 +34,25 @@ The workspace generates synthetic `.dft` and EMF files via `dft2dxf-testkit` for
 unit, integration, and CLI tests. These are preferred for CI because they are small,
 deterministic, and unencumbered.
 
+### CI fixtures (`tests/fixtures/valid/ci/`)
+
+| File | Format |
+| --- | --- |
+| `minimal_cnckad.dft` | Committed cncKad text geometry |
+| `minimal_solid_edge.dft` | Generated on first test run via `ensure_ci_fixtures()` |
+
+`validate-fixtures` and `convert-all` discover files under `valid/` and `valid/ci/`.
+
+### Coverage
+
+Line coverage is measured with `cargo llvm-cov` (see [scripts/coverage.sh](../scripts/coverage.sh)).
+CI enforces **≥ 80%** on library crates + CLI, excluding `dft2dxf-testkit`.
+
+```bash
+bash scripts/coverage.sh
+# or: cargo llvm-cov --workspace --exclude dft2dxf-testkit --summary-only --fail-under-lines 80
+```
+
 ## Real and local `.dft` fixtures
 
 | Mode | Directory | How to enable |

@@ -13,3 +13,8 @@ fn detects_ascii_cnckad_header() {
   let bytes = dft2dxf_testkit::minimal_cnckad_dft().into_bytes();
   assert_eq!(detect_format(&bytes), Some(DftContainerFormat::CncKad));
 }
+
+#[test]
+fn unknown_bytes_return_none() {
+  assert_eq!(detect_format(b"not a format"), None);
+}

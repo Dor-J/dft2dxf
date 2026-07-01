@@ -78,6 +78,21 @@ cargo test --workspace
 cargo fmt --all -- --check
 cargo clippy --workspace -- -D warnings
 
+# Line coverage (>= 80% gate; excludes dft2dxf-testkit)
+bash scripts/coverage.sh
+# Windows: cargo llvm-cov --workspace --exclude dft2dxf-testkit --summary-only --fail-under-lines 80
+```
+
+## Testing
+
+| Metric | Status |
+| --- | --- |
+| Workspace tests | ~100+ integration + unit tests |
+| Line coverage (`cargo llvm-cov`) | **≥ 80%** enforced in CI (Ubuntu) |
+| CI fixtures | `tests/fixtures/valid/ci/` (cncKad + synthetic Solid Edge) |
+| Local cncKad smoke | `validate-fixtures --local` (gitignored fixtures) |
+
+```bash
 dft2dxf validate-fixtures --local
 dft2dxf convert-all --local --dxf-dir target/out/dxf --svg-dir target/out/svg --cam-json
 ```

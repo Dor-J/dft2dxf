@@ -90,3 +90,44 @@ fn parse_floats(line: &str) -> CkadResult<Vec<f64>> {
     })
     .collect()
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn parse_part_section_extracts_names() {
+    let lines = vec!["PART-A".to_string(), "CUSTOMER-B".to_string()];
+    let (part, customer) = parse_part_section(&lines);
+    assert_eq!(part.as_deref(), Some("PART-A"));
+    assert_eq!(customer.as_deref(), Some("CUSTOMER-B"));
+  }
+
+  #[test]
+  fn parse_sheet_section_extents_and_scale() {
+    let lines = vec![
+      "/E 0 0 200 100".to_string(),
+      "/P 200 100 1000 25".to_string(),
+      "/M 4 0 1".to_string(),
+    ];
+    let (width, height, meta) = parse_sheet_section(&lines).unwrap();
+    assert_eq!(width, Some(200.0));
+    assert_eq!(height, Some(100.0));
+    assert_eq!(meta.scale, Some(1000.0));
+    assert_eq!(meta.material.as_deref(), Some("M4"));
+  }
+
+  #[test]
+  fn parse_kfactor_section_reads_value() {
+    assert_eq!(
+      super::parse_kfactor_section(&["KFactor 0.400000".to_string()]),
+      Some(0.4)
+    );
+  }
+
+  #[test]
+  fn parse_thickness_from_section_503() {
+    let sections = vec![(503, vec!["1.500000".to_string()])];
+    assert_eq!(parse_thickness_sections(&sections), Some(1.5));
+  }
+}

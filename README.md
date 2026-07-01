@@ -136,6 +136,15 @@ Do not submit proprietary customer drawings without explicit written permission.
 
 Also see [docs/test-fixtures.md](docs/test-fixtures.md) and [docs/ROADMAP.md](docs/ROADMAP.md).
 
+## Test coverage
+
+```bash
+cargo test --workspace
+bash scripts/coverage.sh   # Ubuntu / CI — enforces >= 80% line coverage
+```
+
+CI runs `cargo llvm-cov` on Ubuntu with `--fail-under-lines 80` (excludes `dft2dxf-testkit`).
+
 ## Security
 
 DFT files are treated as untrusted input. Parsers apply limits to file sizes, stream sizes,

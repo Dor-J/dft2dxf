@@ -110,3 +110,30 @@ pub fn inline_layer_id(values: &[f64]) -> Option<i32> {
     }
   })
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn aci_to_rgb_maps_red() {
+    let color = aci_to_rgb(1);
+    assert_eq!(color.r, 255);
+    assert_eq!(color.g, 0);
+  }
+
+  #[test]
+  fn entity_meta_from_line_parses_layer_and_color() {
+    let meta = EntityMeta::from_line("1 0 269 0 15 0");
+    assert_eq!(meta.layer_id, Some(269));
+    assert_eq!(meta.color_aci, Some(15));
+    assert_eq!(meta.layer_name(), Some("L269".to_string()));
+  }
+
+  #[test]
+  fn inline_color_and_layer_id() {
+    let values = [100.0, 50.0, 10.0, 15.0, 0.0, 269.0];
+    assert_eq!(inline_color(&values), Some(15));
+    assert_eq!(inline_layer_id(&values), Some(269));
+  }
+}

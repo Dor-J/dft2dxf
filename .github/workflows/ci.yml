@@ -29,6 +29,22 @@ jobs:
       - name: Test
         run: cargo test --all
 
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88
+          components: llvm-tools-preview
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+      - name: Line coverage (>= 80%)
+        env:
+          COVERAGE_ENFORCE: "1"
+          COVERAGE_FAIL_UNDER: "80"
+        run: bash scripts/coverage.sh
+
   deny:
     runs-on: ubuntu-latest
     steps:

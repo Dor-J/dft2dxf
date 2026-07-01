@@ -8,6 +8,10 @@ rust-version.workspace = true
 authors.workspace = true
 repository.workspace = true
 
+[lib]
+name = "dft2dxf_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "dft2dxf"
 path = "src/main.rs"
@@ -29,6 +33,7 @@ tracing-subscriber = { workspace = true }
 
 [dev-dependencies]
 assert_cmd = { workspace = true }
+ckad-reader = { workspace = true }
 dft2dxf-testkit = { workspace = true }
 predicates = { workspace = true }
 tempfile = { workspace = true }

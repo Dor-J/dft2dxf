@@ -46,11 +46,42 @@ pub fn use_local_fixtures() -> bool {
   std::env::args().any(|arg| arg == "--local" || arg == "-local")
 }
 
-/// Lists `.dft` files directly under the chosen valid fixtures directory (non-recursive).
+/// Committed CI fixtures (`tests/fixtures/valid/ci/`).
+#[must_use]
+pub fn ci_fixtures_dir() -> PathBuf {
+  valid_fixtures_dir().join("ci")
+}
+
+/// Writes CI fixture files when missing (idempotent).
+pub fn ensure_ci_fixtures() -> std::io::Result<()> {
+  use crate::{build_minimal_dft, build_rectangle_emf, write_minimal_cnckad_dft, MinimalDftSpec};
+
+  let dir = ci_fixtures_dir();
+  std::fs::create_dir_all(&dir)?;
+  let cnckad = dir.join("minimal_cnckad.dft");
+  if !cnckad.is_file() {
+    write_minimal_cnckad_dft(&cnckad)?;
+  }
+  let se = dir.join("minimal_solid_edge.dft");
+  if !se.is_file() {
+    let emf = build_rectangle_emf(0, 0, 100, 50);
+    build_minimal_dft(&se, &MinimalDftSpec::one_sheet("CI-Sheet", emf))?;
+  }
+  Ok(())
+}
+
+/// Lists `.dft` files in the active valid fixtures directory and `valid/ci/`.
 #[must_use]
 pub fn discover_valid_dft_fixtures(use_local: bool) -> Vec<PathBuf> {
-  let dir = active_valid_fixtures_dir(use_local);
-  discover_dft_files_in_dir(&dir)
+  if use_local {
+    return discover_dft_files_in_dir(&local_fixtures_dir());
+  }
+  let mut files = discover_dft_files_in_dir(&valid_fixtures_dir());
+  let ci = discover_dft_files_in_dir(&ci_fixtures_dir());
+  files.extend(ci);
+  files.sort();
+  files.dedup();
+  files
 }
 
 fn discover_dft_files_in_dir(dir: &Path) -> Vec<PathBuf> {
@@ -100,5 +131,12 @@ mod tests {
     let found = discover_dft_files_in_dir(dir.path());
     assert_eq!(found.len(), 1);
     assert!(found[0].to_string_lossy().contains("sample.DFT"));
+  }
+
+  #[test]
+  fn ensure_ci_fixtures_writes_solid_edge_file() {
+    let _ = ensure_ci_fixtures();
+    let se = ci_fixtures_dir().join("minimal_solid_edge.dft");
+    assert!(se.is_file(), "expected generated SE CI fixture");
   }
 }

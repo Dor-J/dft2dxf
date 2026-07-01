@@ -14,6 +14,7 @@
 
 use std::path::Path;
 
+use ckad_reader::detect_format;
 use dft2dxf_testkit::{discover_valid_dft_fixtures, is_emf, use_local_fixtures};
 use dft_reader::{DftDocument, DftOpenOptions, Limits};
 
@@ -43,8 +44,17 @@ fn opens_and_extracts_emf_from_real_solid_edge_dft_fixture() {
   }
 
   for path in fixtures {
+    if is_cnckad_text_dft(&path) {
+      eprintln!("SKIP (cncKad text): {}", path.display());
+      continue;
+    }
     assert_extracts_emf_from_dft(&path);
   }
+}
+
+fn is_cnckad_text_dft(path: &Path) -> bool {
+  let header = std::fs::read(path).unwrap_or_default();
+  detect_format(&header[..header.len().min(12)]).is_some()
 }
 
 fn assert_extracts_emf_from_dft(path: &Path) {

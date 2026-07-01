@@ -16,6 +16,7 @@ thiserror = { workspace = true }
 dft2dxf-testkit = { workspace = true }
 drawing-dxf = { workspace = true }
 drawing-svg = { workspace = true }
+serde_json = { workspace = true }
 tempfile = { workspace = true }
 
 [lints]

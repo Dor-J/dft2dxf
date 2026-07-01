@@ -14,6 +14,7 @@ dxf = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
+ckad-reader = { workspace = true }
 dft2dxf-testkit = { workspace = true }
 dft-reader = { workspace = true }
 emf-reader = { workspace = true }

@@ -1,8 +1,9 @@
-//! Golden DXF output for professional cncKad fixture.
+//! Golden and integration tests for cncKad output.
 
 use ckad_reader::parse_content;
 use dft2dxf_testkit::professional_cnckad_dft;
 use drawing_dxf::write_drawing_to_file;
+use drawing_svg::write_drawing_to_string;
 
 #[test]
 fn professional_cnckad_dxf_contains_native_primitives() {
@@ -21,7 +22,27 @@ fn professional_cnckad_dxf_contains_native_primitives() {
 #[test]
 fn professional_cnckad_svg_matches_bounds() {
   let drawing = parse_content(&professional_cnckad_dft(), None).unwrap();
-  let svg = drawing_svg::write_drawing_to_string(&drawing).unwrap();
+  let svg = write_drawing_to_string(&drawing).unwrap();
   assert!(svg.contains("viewBox"));
   assert!(svg.contains("data-layer"));
+}
+
+#[test]
+fn professional_cnckad_cam_json_structure() {
+  let drawing = parse_content(&professional_cnckad_dft(), None).unwrap();
+  let cam = drawing.cam.expect("CAM program");
+  assert!(cam.tools.len() >= 2);
+  assert!(!cam.operations.is_empty());
+  let json = serde_json::to_string(&cam).unwrap();
+  assert!(json.contains("\"tools\""));
+  assert!(json.contains("\"operations\""));
+}
+
+#[test]
+fn professional_cnckad_entities_have_layers() {
+  let drawing = parse_content(&professional_cnckad_dft(), None).unwrap();
+  assert!(drawing.sheets[0]
+    .entities
+    .iter()
+    .any(|e| e.layer.is_some()));
 }

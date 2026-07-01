@@ -193,6 +193,7 @@ dependencies = [
  "drawing-dxf",
  "drawing-ir",
  "drawing-svg",
+ "serde_json",
  "tempfile",
  "thiserror",
 ]
@@ -274,6 +275,7 @@ name = "dft-reader"
 version = "0.1.0"
 dependencies = [
  "cfb",
+ "ckad-reader",
  "dft2dxf-testkit",
  "flate2",
  "serde",
@@ -323,6 +325,7 @@ checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
 name = "drawing-dxf"
 version = "0.1.0"
 dependencies = [
+ "ckad-reader",
  "dft-reader",
  "dft2dxf-testkit",
  "drawing-ir",
@@ -337,6 +340,7 @@ name = "drawing-ir"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "serde_json",
  "thiserror",
 ]
 

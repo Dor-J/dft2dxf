@@ -1,0 +1,23 @@
+gKad 9.80
+cncKad Version 95276
+None
+
+[100]
+CI-PART
+
+[200]
+/E 0 0 100 50
+
+[300]
+LINES
+1
+0 0 100 0 2 0 0 0 -1 0 0
+1 0 100 0 15 0
+POINTS
+0
+CIRCLES
+0
+ARCS
+0
+
+EOF

@@ -180,4 +180,30 @@ mod tests {
     assert_eq!(tools[0].kind, "R");
     assert_eq!(tools[1].kind, "C");
   }
+
+  #[test]
+  fn parses_operations_section() {
+    use dft2dxf_testkit::professional_cnckad_dft;
+    let content = professional_cnckad_dft();
+    let ops_start = content.find("[1200]").unwrap();
+    let ops_end = content.find("OLE4DM").unwrap();
+    let block: Vec<String> = content[ops_start..ops_end]
+      .lines()
+      .skip(1)
+      .map(str::to_string)
+      .collect();
+    let operations = parse_operations_section(&block).unwrap();
+    assert!(!operations.is_empty());
+    let tools_start = content.find("[1100]").unwrap();
+    let tools_end = content.find("[1200]").unwrap();
+    let tool_lines: Vec<String> = content[tools_start..tools_end]
+      .lines()
+      .skip(1)
+      .filter(|line| !line.trim().is_empty() && !line.starts_with('['))
+      .map(str::to_string)
+      .collect();
+    let program = parse_cam(Some(&tool_lines), Some(&block)).unwrap();
+    assert!(program.tools.len() >= 2);
+    assert_eq!(program.operations.len(), operations.len());
+  }
 }
