@@ -200,3 +200,71 @@ async fn convert_invalid_dft_returns_unprocessable() {
     axum::http::StatusCode::UNPROCESSABLE_ENTITY
   );
 }
+
+#[tokio::test]
+async fn convert_returns_503_when_pool_exhausted() {
+  let state = Arc::new(AppState::with_concurrency(1));
+  let _permit = state.pool.clone().acquire_owned().await.unwrap();
+  let router = app(state);
+  let bytes = synthetic_dft_bytes();
+  let (boundary, payload) = multipart_body(&bytes, &[]);
+
+  let response = router
+    .oneshot(
+      axum::http::Request::builder()
+        .method("POST")
+        .uri("/v1/convert")
+        .header(
+          "content-type",
+          format!("multipart/form-data; boundary={boundary}"),
+        )
+        .body(Body::from(payload))
+        .unwrap(),
+    )
+    .await
+    .unwrap();
+  assert_eq!(
+    response.status(),
+    axum::http::StatusCode::SERVICE_UNAVAILABLE
+  );
+  let body = response.into_body().collect().await.unwrap().to_bytes();
+  let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+  assert!(json["error"]
+    .as_str()
+    .unwrap()
+    .contains("worker pool at capacity"));
+}
+
+#[tokio::test]
+async fn convert_returns_503_when_pool_closed() {
+  let state = Arc::new(AppState::with_concurrency(1));
+  state.pool.close();
+  let router = app(state);
+  let bytes = synthetic_dft_bytes();
+  let (boundary, payload) = multipart_body(&bytes, &[]);
+
+  let response = router
+    .oneshot(
+      axum::http::Request::builder()
+        .method("POST")
+        .uri("/v1/convert")
+        .header(
+          "content-type",
+          format!("multipart/form-data; boundary={boundary}"),
+        )
+        .body(Body::from(payload))
+        .unwrap(),
+    )
+    .await
+    .unwrap();
+  assert_eq!(
+    response.status(),
+    axum::http::StatusCode::SERVICE_UNAVAILABLE
+  );
+  let body = response.into_body().collect().await.unwrap().to_bytes();
+  let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+  assert!(json["error"]
+    .as_str()
+    .unwrap()
+    .contains("worker pool closed"));
+}

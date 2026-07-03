@@ -238,6 +238,8 @@ The sidecar will **not** reimplement parsing; it will depend on `dft2dxf-cli` li
 | `POST` | `/v1/inspect` | Multipart: `file` → JSON metadata summary |
 | `POST` | `/v1/validate` | Multipart: `file` → validation result |
 
+**HTTP status codes:** `400` invalid upload; `422` conversion/validation failure; `503` worker pool at capacity (`WORKER_CONCURRENCY` exhausted) or shutting down.
+
 **`POST /v1/convert` response (multipart or JSON envelope):**
 
 ```json

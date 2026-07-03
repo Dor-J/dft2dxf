@@ -379,7 +379,10 @@ fn parse_poly(record: &EmfRecord, scale_x: f64, scale_y: f64) -> Option<Vec<Poin
     return None;
   }
   let count = u32::from_le_bytes(record.data[8..12].try_into().ok()?) as usize;
-  let is_16 = matches!(record.record_type, EMR_POLYLINE16 | EMR_POLYGON16);
+  let is_16 = matches!(
+    record.record_type,
+    EMR_POLYLINE16 | EMR_POLYGON16 | EMR_POLYBEZIER16
+  );
   let point_size = if is_16 { 4 } else { 8 };
   let start = 12usize;
   let needed = start.checked_add(count.checked_mul(point_size)?)?;
