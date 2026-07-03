@@ -36,16 +36,20 @@ pub fn validate_bytes(input: &[u8], options: &ConvertOptions) -> CoreResult<Vali
       let dir = tempfile::tempdir().map_err(|err| CoreError::read(err.to_string()))?;
       let path = dir.path().join("input.dft");
       std::fs::write(&path, input).map_err(|err| CoreError::read(err.to_string()))?;
-      let mut document = DftDocument::open_with_options(
-        &path,
-        &DftOpenOptions::new().with_limits(options.limits),
-      )
+      let mut document =
+        DftDocument::open_with_options(&path, &DftOpenOptions::new().with_limits(options.limits))
+          .map_err(|err| CoreError::read(err.to_string()))?;
+      let report = document
+        .inspect()
         .map_err(|err| CoreError::read(err.to_string()))?;
-      let report = document.inspect().map_err(|err| CoreError::read(err.to_string()))?;
       if !report.storage.has_viewer_info || !report.storage.has_document_info {
-        return Err(CoreError::read("missing required JDraftViewerInfo metadata"));
+        return Err(CoreError::read(
+          "missing required JDraftViewerInfo metadata",
+        ));
       }
-      let sheets = document.sheets().map_err(|err| CoreError::read(err.to_string()))?;
+      let sheets = document
+        .sheets()
+        .map_err(|err| CoreError::read(err.to_string()))?;
       for sheet in &sheets {
         document
           .extract_emf(sheet.index)

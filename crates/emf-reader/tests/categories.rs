@@ -1,7 +1,9 @@
 //! EMF category diagnostic tests.
 
 use dft2dxf_testkit::build_emf_records;
-use emf_reader::{replay_to_drawing, EmfDocument, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE};
+use emf_reader::{
+  replay_to_drawing, EmfDocument, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE,
+};
 
 fn replay_records(records: &[(u32, Vec<u8>)]) -> drawing_ir::Drawing {
   let emf = build_emf_records(records);

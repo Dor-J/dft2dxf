@@ -1,9 +1,9 @@
 //! Serde round-trip tests for Drawing IR.
 
 use drawing_ir::{
-  ArcSegment, CamOperation, CamProgram, CamTool, Color, Diagnostic, DiagnosticSeverity,
-  Drawing, DrawingMetadata, Entity, EntityKind, PaperUnit, Path, PathSegment, Point, Polyline,
-  Sheet, SourceProvenance, StrokeStyle, Style, TextRun,
+  ArcSegment, CamOperation, CamProgram, CamTool, Color, Diagnostic, DiagnosticSeverity, Drawing,
+  DrawingMetadata, Entity, EntityKind, PaperUnit, Path, PathSegment, Point, Polyline, Sheet,
+  SourceProvenance, StrokeStyle, Style, TextRun,
 };
 
 #[allow(clippy::too_many_lines)]

@@ -43,11 +43,9 @@ pub fn inspect_bytes(input: &[u8], options: &ConvertOptions) -> CoreResult<Inspe
       let dir = tempfile::tempdir().map_err(|err| CoreError::read(err.to_string()))?;
       let path = dir.path().join("input.dft");
       std::fs::write(&path, input).map_err(|err| CoreError::read(err.to_string()))?;
-      let mut document = DftDocument::open_with_options(
-        &path,
-        &DftOpenOptions::new().with_limits(options.limits),
-      )
-      .map_err(|err| CoreError::read(err.to_string()))?;
+      let mut document =
+        DftDocument::open_with_options(&path, &DftOpenOptions::new().with_limits(options.limits))
+          .map_err(|err| CoreError::read(err.to_string()))?;
       let report = document
         .inspect()
         .map_err(|err| CoreError::read(err.to_string()))?;

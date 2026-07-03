@@ -105,9 +105,7 @@ pub fn convert_bytes(input: &[u8], options: &ConvertOptions) -> CoreResult<Conve
     .map_err(|err| CoreError::convert(err.to_string()))?;
 
   let svg = if options.include_svg {
-    Some(
-      write_drawing_to_string(&drawing).map_err(|err| CoreError::convert(err.to_string()))?,
-    )
+    Some(write_drawing_to_string(&drawing).map_err(|err| CoreError::convert(err.to_string()))?)
   } else {
     None
   };
@@ -159,9 +157,13 @@ pub fn build_cam_json(drawing: &Drawing) -> serde_json::Value {
   .unwrap_or(serde_json::json!({}))
 }
 
-fn load_solid_edge_drawing(path: &std::path::Path, options: &ConvertOptions) -> CoreResult<Drawing> {
-  let mut document = DftDocument::open_with_options(path, &DftOpenOptions::new().with_limits(options.limits))
-    .map_err(|err| CoreError::read(err.to_string()))?;
+fn load_solid_edge_drawing(
+  path: &std::path::Path,
+  options: &ConvertOptions,
+) -> CoreResult<Drawing> {
+  let mut document =
+    DftDocument::open_with_options(path, &DftOpenOptions::new().with_limits(options.limits))
+      .map_err(|err| CoreError::read(err.to_string()))?;
 
   let sheets = document
     .sheets()
@@ -176,12 +178,8 @@ fn load_solid_edge_drawing(path: &std::path::Path, options: &ConvertOptions) -> 
     .extract_emf(index)
     .map_err(|err| CoreError::read(err.to_string()))?;
 
-  let emf_doc = EmfDocument::parse(
-    &emf.data,
-    DEFAULT_MAX_RECORD_COUNT,
-    DEFAULT_MAX_RECORD_SIZE,
-  )
-  .map_err(|err| CoreError::read(err.to_string()))?;
+  let emf_doc = EmfDocument::parse(&emf.data, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE)
+    .map_err(|err| CoreError::read(err.to_string()))?;
 
   Ok(replay_to_drawing(
     &emf_doc,

@@ -147,9 +147,9 @@ impl EmfDocument {
       return Err(EmfError::MissingEof);
     }
 
-    let first = records.first().ok_or_else(|| {
-      EmfError::invalid("header", "EMF contains no records")
-    })?;
+    let first = records
+      .first()
+      .ok_or_else(|| EmfError::invalid("header", "EMF contains no records"))?;
     if first.record_type != EMR_HEADER {
       return Err(EmfError::invalid(
         "header",

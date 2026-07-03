@@ -9,9 +9,7 @@ use tokio::net::{TcpListener, TcpStream};
 
 async fn http_get(addr: std::net::SocketAddr, path: &str) -> String {
   let mut stream = TcpStream::connect(addr).await.unwrap();
-  let request = format!(
-    "GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
-  );
+  let request = format!("GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
   stream.write_all(request.as_bytes()).await.unwrap();
   let mut response = String::new();
   stream.read_to_string(&mut response).await.unwrap();

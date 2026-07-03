@@ -33,7 +33,8 @@ fn rectangle_drawing() -> drawing_ir::Drawing {
 #[test]
 fn golden_rectangle_dxf_contains_entities() {
   let mut drawing = rectangle_drawing();
-  let bytes = write_drawing_to_bytes(&mut drawing, drawing_dxf::DxfWriteOptions::default()).unwrap();
+  let bytes =
+    write_drawing_to_bytes(&mut drawing, drawing_dxf::DxfWriteOptions::default()).unwrap();
   let content = String::from_utf8_lossy(&bytes);
   let normalized = normalize_dxf(&content);
   assert!(normalized.contains("ENTITIES"));
@@ -55,7 +56,8 @@ fn pipeline_solid_edge_dxf_matches_structure() {
   )
   .unwrap();
   let mut drawing = replay_to_drawing(&emf_doc, Some(1), None, None, None);
-  let bytes = write_drawing_to_bytes(&mut drawing, drawing_dxf::DxfWriteOptions::default()).unwrap();
+  let bytes =
+    write_drawing_to_bytes(&mut drawing, drawing_dxf::DxfWriteOptions::default()).unwrap();
   let golden_path = golden_dxf_dir().join("rectangle.dxf");
   if golden_path.exists() {
     let golden = std::fs::read_to_string(golden_path).unwrap();

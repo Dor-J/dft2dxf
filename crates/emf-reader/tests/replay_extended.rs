@@ -110,17 +110,14 @@ fn header_record_count_mismatch_emits_diagnostic() {
 fn replays_set_world_transform_scales_geometry() {
   let emf = build_emf_records(&[
     (35, world_transform_payload(2.0, 2.0)),
-    (
-      42,
-      {
-        let mut rect = vec![0u8; 16];
-        rect[0..4].copy_from_slice(&0i32.to_le_bytes());
-        rect[4..8].copy_from_slice(&0i32.to_le_bytes());
-        rect[8..12].copy_from_slice(&10i32.to_le_bytes());
-        rect[12..16].copy_from_slice(&10i32.to_le_bytes());
-        rect
-      },
-    ),
+    (42, {
+      let mut rect = vec![0u8; 16];
+      rect[0..4].copy_from_slice(&0i32.to_le_bytes());
+      rect[4..8].copy_from_slice(&0i32.to_le_bytes());
+      rect[8..12].copy_from_slice(&10i32.to_le_bytes());
+      rect[12..16].copy_from_slice(&10i32.to_le_bytes());
+      rect
+    }),
   ]);
   let drawing = parse_and_replay(&emf);
   let rect = drawing.sheets[0]
@@ -152,15 +149,12 @@ fn replays_ext_create_pen_stroke() {
   let emf = build_emf_records(&[
     (95, ext_create_pen_payload(1, 3, 0x0000_FF00)),
     (37, select_object_payload(1)),
-    (
-      54,
-      {
-        let mut line = vec![0u8; 8];
-        line[0..4].copy_from_slice(&5i32.to_le_bytes());
-        line[4..8].copy_from_slice(&5i32.to_le_bytes());
-        line
-      },
-    ),
+    (54, {
+      let mut line = vec![0u8; 8];
+      line[0..4].copy_from_slice(&5i32.to_le_bytes());
+      line[4..8].copy_from_slice(&5i32.to_le_bytes());
+      line
+    }),
   ]);
   let drawing = parse_and_replay(&emf);
   let line = drawing.sheets[0]
@@ -177,8 +171,7 @@ fn replays_ext_create_pen_stroke() {
 fn font_selection_sets_text_size() {
   let text_payload = {
     let text = build_text_emf(5, 5, "Sized");
-    let doc =
-      EmfDocument::parse(&text, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE).unwrap();
+    let doc = EmfDocument::parse(&text, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE).unwrap();
     doc.records[1].data[8..].to_vec()
   };
   let drawing = parse_and_replay(&build_emf_records(&[
@@ -293,33 +286,24 @@ fn unsupported_record_class_emits_diagnostic() {
 #[test]
 fn synthesizes_path_from_connected_lines() {
   let emf = build_emf_records(&[
-    (
-      27,
-      {
-        let mut moveto = vec![0u8; 8];
-        moveto[0..4].copy_from_slice(&0i32.to_le_bytes());
-        moveto[4..8].copy_from_slice(&0i32.to_le_bytes());
-        moveto
-      },
-    ),
-    (
-      54,
-      {
-        let mut line = vec![0u8; 8];
-        line[0..4].copy_from_slice(&10i32.to_le_bytes());
-        line[4..8].copy_from_slice(&0i32.to_le_bytes());
-        line
-      },
-    ),
-    (
-      54,
-      {
-        let mut line = vec![0u8; 8];
-        line[0..4].copy_from_slice(&10i32.to_le_bytes());
-        line[4..8].copy_from_slice(&10i32.to_le_bytes());
-        line
-      },
-    ),
+    (27, {
+      let mut moveto = vec![0u8; 8];
+      moveto[0..4].copy_from_slice(&0i32.to_le_bytes());
+      moveto[4..8].copy_from_slice(&0i32.to_le_bytes());
+      moveto
+    }),
+    (54, {
+      let mut line = vec![0u8; 8];
+      line[0..4].copy_from_slice(&10i32.to_le_bytes());
+      line[4..8].copy_from_slice(&0i32.to_le_bytes());
+      line
+    }),
+    (54, {
+      let mut line = vec![0u8; 8];
+      line[0..4].copy_from_slice(&10i32.to_le_bytes());
+      line[4..8].copy_from_slice(&10i32.to_le_bytes());
+      line
+    }),
   ]);
   let drawing = parse_and_replay(&emf);
   let path = drawing.sheets[0]

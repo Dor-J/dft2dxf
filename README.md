@@ -18,6 +18,7 @@ cncKad is the **primary, full-fidelity** path. Solid Edge conversion replays **v
 - **DXF:** native `ARC`/`CIRCLE`, layer table + ACI colors, `$INSUNITS` (mm), drawing extents, CAM layers (`PUNCH`/`CUT`/`TOOLS`)
 - **SVG:** computed `viewBox` from bounds, per-layer groups, Y-flip for CAD coordinates
 - **CLI:** single-file `convert`, batch `convert-all`, optional `--cam-json` sidecar, `--units` override
+- **Backend:** in-memory `dft2dxf-core` library + optional **HTTP sidecar** (Axum) for FastAPI and other clients
 
 ## What this project does **not** do
 
@@ -115,6 +116,16 @@ let emf = document.extract_emf(1)?;
 emf.write_to("sheet-1.emf")?;
 ```
 
+### In-memory (backends and sidecar)
+
+```rust
+use dft2dxf_core::{convert_bytes, ConvertOptions};
+
+let bytes = std::fs::read("part.DFT")?;
+let output = convert_bytes(&bytes, &ConvertOptions::default())?;
+// output.dxf, output.svg, output.cam_json, output.diagnostics
+```
+
 ## Workspace layout
 
 | Crate | Role |
@@ -124,7 +135,9 @@ emf.write_to("sheet-1.emf")?;
 | `emf-reader` | EMF record replay → Drawing IR |
 | `drawing-ir` | Shared geometry, metadata, CAM model |
 | `drawing-dxf` / `drawing-svg` | DXF and SVG writers |
+| `dft2dxf-core` | In-memory convert / inspect / validate (shared by CLI and sidecar) |
 | `dft2dxf-cli` | Command-line interface |
+| `dft2dxf-sidecar` | HTTP API with bounded worker pool (`/v1/convert`, `/v1/inspect`, `/v1/validate`) |
 | `dft2dxf-testkit` | Synthetic fixtures for tests |
 
 ## Contributing fixtures
@@ -139,17 +152,50 @@ and [docs/backend-integration.md](docs/backend-integration.md) for FastAPI / bac
 
 ## Backend integration (FastAPI)
 
-For Python backends, use the **CLI subprocess** pattern today — build the release binary and
-call `dft2dxf convert` from an async worker. A planned **Axum HTTP sidecar** (M9) will support
-high-concurrency in-process conversion without per-request subprocess spawn.
+Python backends integrate via the **CLI subprocess** or **HTTP sidecar** — there is no PyPI package.
+Full examples (async subprocess wrapper, `httpx` client, Docker) are in
+[docs/backend-integration.md](docs/backend-integration.md).
 
-| Pattern | Status |
+| Pattern | Status | Best for |
+| --- | --- | --- |
+| CLI subprocess | **Ready** | Simplest setup, single server, batch jobs |
+| HTTP sidecar (Axum) | **Ready** | Many concurrent uploads, shared worker pool |
+
+### Option A — CLI subprocess
+
+Build once, call `dft2dxf convert` from an async worker (do not block the event loop):
+
+```bash
+cargo build --release
+# target/release/dft2dxf  (or dft2dxf.exe on Windows)
+```
+
+### Option B — HTTP sidecar
+
+Run the converter as a separate service; FastAPI POSTs multipart `.dft` uploads:
+
+```bash
+cargo build --release -p dft2dxf-sidecar
+WORKER_CONCURRENCY=4 ./target/release/dft2dxf-sidecar
+# http://127.0.0.1:8080 — GET /health, POST /v1/convert, /v1/inspect, /v1/validate
+```
+
+Or with Docker Compose (sidecar + example API wiring):
+
+```bash
+docker compose -f deploy/docker-compose.yml up --build
+```
+
+The sidecar returns **503** when `WORKER_CONCURRENCY` is exhausted (retry or queue on the client).
+
+### Format readiness
+
+| Source | Backend use |
 | --- | --- |
-| CLI subprocess from FastAPI | **Ready** — see [docs/backend-integration.md](docs/backend-integration.md) |
-| HTTP sidecar (Axum worker pool) | **Ready** — `cargo build -p dft2dxf-sidecar` |
+| **cncKad** | Production-ready — geometry, layers, metadata, CAM JSON |
+| **Solid Edge** | Preview / SVG / visual DXF only (EMF fidelity ceiling) |
 
-**cncKad** files are production-ready via subprocess; **Solid Edge** files are suitable for
-preview/SVG only (EMF fidelity ceiling). See [docs/limitations.md](docs/limitations.md).
+See [docs/limitations.md](docs/limitations.md).
 
 ## Test coverage
 

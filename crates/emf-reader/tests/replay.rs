@@ -99,7 +99,11 @@ fn invalid_select_object_emits_diagnostic() {
   let mut line_payload = vec![0u8; 8];
   line_payload[0..4].copy_from_slice(&10i32.to_le_bytes());
   line_payload[4..8].copy_from_slice(&10i32.to_le_bytes());
-  let emf = dft2dxf_testkit::build_emf_records(&[(37, select_payload), (27, move_payload), (54, line_payload)]);
+  let emf = dft2dxf_testkit::build_emf_records(&[
+    (37, select_payload),
+    (27, move_payload),
+    (54, line_payload),
+  ]);
   let drawing = parse_and_replay(&emf);
   assert!(drawing
     .diagnostics

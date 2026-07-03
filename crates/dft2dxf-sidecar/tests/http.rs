@@ -22,10 +22,8 @@ fn multipart_body(bytes: &[u8], extra_fields: &[(&str, &str)]) -> (String, Vec<u
   let mut payload = Vec::new();
   for (name, value) in extra_fields {
     payload.extend_from_slice(
-      format!(
-        "--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n"
-      )
-      .as_bytes(),
+      format!("--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n")
+        .as_bytes(),
     );
   }
   payload.extend_from_slice(

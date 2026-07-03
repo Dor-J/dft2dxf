@@ -1,11 +1,7 @@
 //! Inspect and validate API tests.
 
-use dft2dxf_core::{
-  inspect_bytes, validate_bytes, ConvertOptions, CoreError,
-};
-use dft2dxf_testkit::{
-  build_minimal_dft, build_rectangle_emf, minimal_cnckad_dft, MinimalDftSpec,
-};
+use dft2dxf_core::{inspect_bytes, validate_bytes, ConvertOptions, CoreError};
+use dft2dxf_testkit::{build_minimal_dft, build_rectangle_emf, minimal_cnckad_dft, MinimalDftSpec};
 
 fn synthetic_solid_edge_bytes() -> Vec<u8> {
   let dir = tempfile::tempdir().unwrap();

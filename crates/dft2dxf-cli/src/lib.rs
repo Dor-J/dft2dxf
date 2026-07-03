@@ -17,8 +17,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use ckad_reader::{detect_format, read_to_drawing, DftContainerFormat};
 use clap::{Parser, Subcommand, ValueEnum};
-use dft_reader::{DftDocument, DftOpenOptions, Limits};
 use dft2dxf_core::{convert_bytes, ConvertOptions};
+use dft_reader::{DftDocument, DftOpenOptions, Limits};
 use drawing_ir::PaperUnit;
 use tracing_subscriber::EnvFilter;
 
@@ -343,8 +343,8 @@ fn cmd_convert_solid_edge(
   cam_json: bool,
   units: Option<&str>,
 ) -> Result<()> {
-  let bytes = std::fs::read(input)
-    .with_context(|| format!("failed to read {}", input.display()))?;
+  let bytes =
+    std::fs::read(input).with_context(|| format!("failed to read {}", input.display()))?;
   let index = sheet.unwrap_or(1);
   let result = convert_bytes(
     &bytes,
@@ -387,8 +387,8 @@ fn cmd_convert_cnckad(
   cam_json: bool,
   units: Option<&str>,
 ) -> Result<()> {
-  let bytes = std::fs::read(input)
-    .with_context(|| format!("failed to read {}", input.display()))?;
+  let bytes =
+    std::fs::read(input).with_context(|| format!("failed to read {}", input.display()))?;
   let result = convert_bytes(
     &bytes,
     &ConvertOptions {

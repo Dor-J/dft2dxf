@@ -527,7 +527,9 @@ fn build_paths_from_moveto_lineto(sheet: &mut Sheet) {
     return;
   }
 
-  let path_provenance = line_entities.first().and_then(|entity| entity.provenance.clone());
+  let path_provenance = line_entities
+    .first()
+    .and_then(|entity| entity.provenance.clone());
   let path_style = line_entities
     .first()
     .map(|entity| entity.style.clone())

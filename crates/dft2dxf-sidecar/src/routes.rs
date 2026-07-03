@@ -83,10 +83,14 @@ pub async fn convert(
 ) -> Result<Json<ConvertResponse>, ApiError> {
   let (bytes, include_svg, include_cam_json, sheet, units) = read_upload(&mut multipart).await?;
   let limits = state.limits;
-  let permit = state.pool.clone().try_acquire_owned().map_err(|err| match err {
-    TryAcquireError::Closed => ApiError::service_unavailable("worker pool closed"),
-    TryAcquireError::NoPermits => ApiError::service_unavailable("worker pool at capacity"),
-  })?;
+  let permit = state
+    .pool
+    .clone()
+    .try_acquire_owned()
+    .map_err(|err| match err {
+      TryAcquireError::Closed => ApiError::service_unavailable("worker pool closed"),
+      TryAcquireError::NoPermits => ApiError::service_unavailable("worker pool at capacity"),
+    })?;
 
   let options = ConvertOptions {
     limits,
