@@ -76,6 +76,38 @@ fn replays_polygon_and_ellipse_emf() {
 }
 
 #[test]
+fn pen_selection_applies_stroke_style() {
+  let emf = build_pen_and_line_emf();
+  let drawing = parse_and_replay(&emf);
+  let line = drawing.sheets[0]
+    .entities
+    .iter()
+    .find(|e| matches!(e.kind, EntityKind::Line { .. }))
+    .expect("line entity");
+  let stroke = line.style.stroke.as_ref().expect("stroke");
+  assert_eq!(stroke.color.r, 255);
+  assert_eq!(stroke.color.g, 0);
+  assert_eq!(stroke.color.b, 0);
+  assert!((stroke.width - 2.0).abs() < f64::EPSILON);
+}
+
+#[test]
+fn invalid_select_object_emits_diagnostic() {
+  let mut select_payload = vec![0u8; 4];
+  select_payload[0..4].copy_from_slice(&99u32.to_le_bytes());
+  let move_payload = vec![0u8; 8];
+  let mut line_payload = vec![0u8; 8];
+  line_payload[0..4].copy_from_slice(&10i32.to_le_bytes());
+  line_payload[4..8].copy_from_slice(&10i32.to_le_bytes());
+  let emf = dft2dxf_testkit::build_emf_records(&[(37, select_payload), (27, move_payload), (54, line_payload)]);
+  let drawing = parse_and_replay(&emf);
+  assert!(drawing
+    .diagnostics
+    .iter()
+    .any(|d| d.code == "emf.invalid_object_index"));
+}
+
+#[test]
 fn rejects_truncated_emf() {
   let data = build_transform_emf();
   let truncated = &data[..data.len() / 2];

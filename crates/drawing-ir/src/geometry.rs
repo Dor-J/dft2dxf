@@ -1,9 +1,9 @@
 //! Basic geometry primitives.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// A 2D point in drawing coordinates.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Point {
   /// X coordinate.
   pub x: f64,
@@ -20,7 +20,7 @@ impl Point {
 }
 
 /// Axis-aligned bounding box.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct BoundingBox {
   /// Minimum X.
   pub min_x: f64,
@@ -63,7 +63,7 @@ impl BoundingBox {
 }
 
 /// One segment in a path.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum PathSegment {
   /// Move without drawing.
@@ -81,14 +81,14 @@ pub enum PathSegment {
 }
 
 /// A path made of segments.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Path {
   /// Path segments in order.
   pub segments: Vec<PathSegment>,
 }
 
 /// A polyline entity.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Polyline {
   /// Vertices in order.
   pub points: Vec<Point>,
@@ -97,7 +97,7 @@ pub struct Polyline {
 }
 
 /// A circular arc segment.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ArcSegment {
   /// Center point.
   pub center: Point,

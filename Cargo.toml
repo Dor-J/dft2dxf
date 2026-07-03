@@ -3,6 +3,8 @@ resolver = "2"
 members = [
   "crates/ckad-reader",
   "crates/dft2dxf-cli",
+  "crates/dft2dxf-core",
+  "crates/dft2dxf-sidecar",
   "crates/dft-reader",
   "crates/emf-reader",
   "crates/drawing-ir",
@@ -37,6 +39,12 @@ insta = { version = "1", features = ["json"] }
 assert_cmd = "2"
 predicates = "3"
 tempfile = "3"
+axum = { version = "0.8", features = ["multipart"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace"] }
+base64 = "0.22"
+http-body-util = "0.1"
 
 dft-reader = { version = "0.1.0", path = "crates/dft-reader" }
 emf-reader = { version = "0.1.0", path = "crates/emf-reader" }
@@ -44,6 +52,7 @@ drawing-ir = { version = "0.1.0", path = "crates/drawing-ir" }
 drawing-svg = { version = "0.1.0", path = "crates/drawing-svg" }
 drawing-dxf = { version = "0.1.0", path = "crates/drawing-dxf" }
 dft2dxf-testkit = { version = "0.1.0", path = "crates/dft2dxf-testkit" }
+dft2dxf-core = { version = "0.1.0", path = "crates/dft2dxf-core" }
 ckad-reader = { version = "0.1.0", path = "crates/ckad-reader" }
 
 [workspace.lints.rust]

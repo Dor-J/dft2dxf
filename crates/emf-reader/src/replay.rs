@@ -9,10 +9,11 @@ use drawing_ir::{
 
 use crate::parser::{EmfDocument, EmfRecord};
 use crate::record::{
-  EMR_ARC, EMR_ARCTO, EMR_CHORD, EMR_CREATEPEN, EMR_ELLIPSE, EMR_EXTCREATEFONTINDIRECTW,
-  EMR_EXTCREATEPEN, EMR_EXTTEXTOUTA, EMR_EXTTEXTOUTW, EMR_LINETO, EMR_MODIFYWORLDTRANSFORM,
-  EMR_MOVETOEX, EMR_PIE, EMR_POLYBEZIER16, EMR_POLYGON, EMR_POLYGON16, EMR_POLYLINE,
-  EMR_POLYLINE16, EMR_RECTANGLE, EMR_SELECTOBJECT, EMR_SETMAPMODE, EMR_SETWORLDTRANSFORM,
+  EMR_ARC, EMR_ARCTO, EMR_BITBLT, EMR_CHORD, EMR_CREATEBRUSH, EMR_CREATEPEN, EMR_ELLIPSE,
+  EMR_EXCLUDECLIPRECT, EMR_EXTCREATEFONTINDIRECTW, EMR_EXTCREATEPEN, EMR_EXTTEXTOUTA,
+  EMR_EXTTEXTOUTW, EMR_INTERSECTCLIPRECT, EMR_LINETO, EMR_MODIFYWORLDTRANSFORM, EMR_MOVETOEX,
+  EMR_PIE, EMR_POLYBEZIER16, EMR_POLYGON, EMR_POLYGON16, EMR_POLYLINE, EMR_POLYLINE16,
+  EMR_RECTANGLE, EMR_SELECTOBJECT, EMR_SETMAPMODE, EMR_SETWORLDTRANSFORM, EMR_STRETCHDIBITS,
 };
 
 /// Replays supported EMF records into a single drawing sheet.
@@ -42,6 +43,16 @@ pub fn replay_to_drawing(
   let mut scale_x = 1.0f64;
   let mut scale_y = 1.0f64;
   let mut text_height = 12.0f64;
+
+  if let Some(message) = emf
+    .header
+    .record_count_mismatch(u32::try_from(emf.records.len()).unwrap_or(u32::MAX))
+  {
+    drawing.push_diagnostic(drawing_ir::Diagnostic::warning(
+      "emf.header_record_count",
+      message,
+    ));
+  }
 
   for record in &emf.records {
     match record.record_type {
@@ -76,9 +87,13 @@ pub fn replay_to_drawing(
         if let Some(index) = parse_select_object(record) {
           if let Some(pen) = pens.get(&index) {
             stroke = pen.clone();
-          }
-          if let Some(height) = fonts.get(&index) {
+          } else if let Some(height) = fonts.get(&index) {
             text_height = *height;
+          } else {
+            drawing.push_diagnostic(drawing_ir::Diagnostic::warning(
+              "emf.invalid_object_index",
+              format!("SELECTOBJECT references unknown index {index}"),
+            ));
           }
         }
       }
@@ -180,8 +195,32 @@ pub fn replay_to_drawing(
           ));
         }
       }
+      EMR_INTERSECTCLIPRECT | EMR_EXCLUDECLIPRECT => {
+        drawing.push_diagnostic(drawing_ir::Diagnostic::warning(
+          "emf.clipping_unsupported",
+          format!(
+            "clipping record 0x{:08X} at index {}",
+            record.record_type, record.index
+          ),
+        ));
+      }
+      EMR_CREATEBRUSH => {
+        drawing.push_diagnostic(drawing_ir::Diagnostic::warning(
+          "emf.fill_unsupported",
+          format!("brush record at index {}", record.index),
+        ));
+      }
+      EMR_BITBLT | EMR_STRETCHDIBITS => {
+        drawing.push_diagnostic(drawing_ir::Diagnostic::warning(
+          "emf.raster_unsupported",
+          format!(
+            "raster record 0x{:08X} at index {}",
+            record.record_type, record.index
+          ),
+        ));
+      }
       other if record.class() == crate::parser::RecordClass::Unsupported => {
-        drawing.push_diagnostic(Diagnostic::unsupported_record(other, record.index));
+        drawing.push_diagnostic(diagnostic_for_unsupported_record(other, record.index));
       }
       _ => {}
     }
@@ -192,6 +231,10 @@ pub fn replay_to_drawing(
   sheet.recompute_bounds();
   drawing.sheets.push(sheet);
   drawing
+}
+
+fn diagnostic_for_unsupported_record(record_type: u32, record_index: u32) -> Diagnostic {
+  Diagnostic::unsupported_record(record_type, record_index)
 }
 
 fn styled_entity(kind: EntityKind, stroke: &StrokeStyle, record: &EmfRecord) -> Entity {
@@ -265,9 +308,9 @@ fn parse_create_pen(record: &EmfRecord) -> Option<(u32, StrokeStyle)> {
   if record.data.len() < 28 {
     return None;
   }
-  let index = read_u32(record, 4)?;
-  let color = read_u32(record, 12)?;
+  let index = read_u32(record, 8)?;
   let width = read_i32_as_f64(record, 16)?;
+  let color = read_u32(record, 24)?;
   Some((index, stroke_from_color_ref(color, width.max(1.0))))
 }
 
@@ -431,16 +474,24 @@ fn parse_ellipse(record: &EmfRecord, scale_x: f64, scale_y: f64) -> Option<(Poin
 }
 
 fn parse_text_record(record: &EmfRecord, scale_x: f64, scale_y: f64) -> Option<(Point, String)> {
-  if record.data.len() < 24 {
+  if record.data.len() < 52 {
     return None;
   }
-  let x = read_i32_as_f64(record, 8)?;
-  let y = read_i32_as_f64(record, 12)?;
-  let string_bytes = record.data.get(24..)?;
+  let x = read_i32_as_f64(record, 36)?;
+  let y = read_i32_as_f64(record, 40)?;
+  let n_chars = read_u32(record, 44)?;
+  let off_string = usize::try_from(read_u32(record, 48)?).ok()?;
+  if off_string >= record.data.len() {
+    return None;
+  }
   let text = if record.record_type == EMR_EXTTEXTOUTW {
-    decode_utf16_le(string_bytes).unwrap_or_default()
+    let byte_len = usize::try_from(n_chars).ok()?.saturating_mul(2);
+    let end = off_string.saturating_add(byte_len).min(record.data.len());
+    decode_utf16_le(record.data.get(off_string..end)?).unwrap_or_default()
   } else {
-    String::from_utf8_lossy(string_bytes)
+    let byte_len = usize::try_from(n_chars).ok()?;
+    let end = off_string.saturating_add(byte_len).min(record.data.len());
+    String::from_utf8_lossy(record.data.get(off_string..end)?)
       .trim_end_matches('\0')
       .to_string()
   };
@@ -473,6 +524,12 @@ fn build_paths_from_moveto_lineto(sheet: &mut Sheet) {
     return;
   }
 
+  let path_provenance = line_entities.first().and_then(|entity| entity.provenance.clone());
+  let path_style = line_entities
+    .first()
+    .map(|entity| entity.style.clone())
+    .unwrap_or_default();
+
   let mut segments = Vec::new();
   for entity in line_entities {
     if let EntityKind::Line { from, to } = entity.kind {
@@ -485,9 +542,9 @@ fn build_paths_from_moveto_lineto(sheet: &mut Sheet) {
   if !segments.is_empty() {
     sheet.entities.push(Entity {
       layer: None,
-      style: Style::default(),
+      style: path_style,
       kind: EntityKind::Path(Path { segments }),
-      provenance: None,
+      provenance: path_provenance,
     });
   }
 }

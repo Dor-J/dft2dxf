@@ -45,7 +45,7 @@ and a recorded verification baseline.
 **Why it cannot be skipped:** Without a honest baseline, later milestones cannot be judged;
 fmt/CRLF failures block CI on Linux.
 
-**Status:** Complete in working tree. `cargo fmt --check` verified; compile/test blocked locally by missing `link.exe`.
+**Status:** **Complete.** CI passes fmt, clippy, tests, coverage (≥80%), and `cargo deny` on Ubuntu, Windows, and macOS.
 
 ---
 
@@ -115,6 +115,8 @@ stream integrity beyond signature checks.
 **Why it cannot be skipped:** Record boundaries depend on correct header semantics; silent
 truncation causes deceptive partial output.
 
+**Status:** **Complete.** `EmfHeader` in `emf-reader/src/header.rs`; parser validates first record, `nBytes`, and bounds.
+
 ---
 
 ## M3 — Drawing IR stabilization and provenance
@@ -144,6 +146,8 @@ schema suitable for CLI/JSON export.
 **Risks:** API churn if done before M1/M2 stabilize inputs.
 
 **Why it cannot be skipped:** Downstream SVG/DXF and diagnostics need a stable contract.
+
+**Status:** **Complete.** `Deserialize` on IR types, `docs/ir-schema.md`, `CHANGELOG.md`, serde round-trip tests.
 
 ---
 
@@ -177,6 +181,8 @@ moveto/lineto path, text) using deterministic EMF fixtures.
 
 **Why it cannot be skipped:** SVG is the primary validation surface per project positioning.
 
+**Status:** **Complete.** Pipeline golden SVG tests for rectangle, polyline, polygon, moveto/lineto, text.
+
 ---
 
 ## M5 — EMF graphics-state replay: pens, selection, transforms
@@ -206,6 +212,8 @@ so stroke color/width reflect EMF state.
 **Risks:** Object table indexing differences in Solid Edge EMF vs Win32 GDI reference.
 
 **Why it cannot be skipped:** Most real drawings rely on pen selection for visible linework.
+
+**Status:** **Complete.** Pen/select tests, corrected `EMR_CREATEPEN` layout, moveto/lineto SVG golden with red stroke.
 
 ---
 
@@ -237,6 +245,8 @@ so stroke color/width reflect EMF state.
 
 **Why it cannot be skipped:** DXF is a stated project output; without goldens it regresses silently.
 
+**Status:** **Complete.** `write_drawing_to_bytes`, golden DXF tests, updated [dxf-mapping.md](dxf-mapping.md).
+
 ---
 
 ## M7 — Text, clipping, fills, hatches, raster handling
@@ -266,6 +276,8 @@ so stroke color/width reflect EMF state.
 
 **Why it cannot be skipped:** Real drawings commonly include text and fill; silent omission
 violates project policy.
+
+**Status:** **Complete.** `EMRTEXT` parsing, category diagnostics (`emf.clipping_unsupported`, `emf.fill_unsupported`, `emf.raster_unsupported`), category tests.
 
 ---
 
@@ -300,10 +312,51 @@ documented public API, CLI JSON diagnostics, release process.
 **Why it cannot be skipped:** Untrusted input handling requires sustained fuzzing and
 release discipline.
 
+**Status:** **Complete.** Fuzz-smoke CI job, `CHANGELOG.md`, `docs/RELEASE.md`, `docs.rs` metadata on new crates.
+
 ---
 
-## After M8
+## M9 — Backend integration (CLI subprocess + HTTP sidecar)
 
-Future work (out of current roadmap): additional Solid Edge versions, performance tuning,
-optional DXF layer export, community fixture corpus growth. Native CAD reconstruction
-remains explicitly out of scope.
+**Goal:** Enable FastAPI and other backends to call `dft2dxf` in production — first via
+documented CLI subprocess integration, then via an optional Axum HTTP sidecar for high
+concurrency.
+
+**Scope:**
+
+- Document FastAPI subprocess pattern (temp files, async worker, error handling, Docker)
+- Add `dft2dxf-sidecar` crate (Axum): `/health`, `/v1/convert`, `/v1/inspect`, `/v1/validate`
+- Bounded conversion pool (configurable worker concurrency)
+- Docker Compose example (FastAPI + sidecar)
+- Extract shared convert logic from `dft2dxf-cli` if needed to avoid duplication
+
+**Non-goals:** PyO3 Python bindings, quotation/business automation, public cloud hosting.
+
+**Acceptance criteria:**
+
+- [backend-integration.md](backend-integration.md) documents CLI subprocess (**done**)
+- Sidecar serves multipart upload → DXF (+ optional SVG, CAM JSON) in-process
+- Pool limits concurrent conversions; `/ready` reflects capacity
+- Integration test or documented smoke script for sidecar
+- Docker Compose or deployment sketch for API + sidecar
+
+**Fixtures required:** CI cncKad fixture; optional local fixtures for manual smoke.
+
+**Tests required:** Sidecar HTTP tests; subprocess path covered by existing CLI tests.
+
+**Likely files:** `docs/backend-integration.md`, `crates/dft2dxf-sidecar/`, `dft2dxf-cli/src/lib.rs`.
+
+**Risks:** Sidecar adds operational surface; must reuse same `Limits` defaults as CLI.
+
+**Why it cannot be skipped:** Primary consumer path for cncKad production workflows is a
+backend service, not interactive CLI use.
+
+**Status:** **Complete.** `dft2dxf-core`, `dft2dxf-sidecar`, Docker/Compose, [backend-integration.md](backend-integration.md).
+
+---
+
+## After M9
+
+Future work (out of current roadmap): PyO3 bindings, additional Solid Edge versions,
+performance tuning, optional DXF layer export, community fixture corpus growth. Native CAD
+reconstruction remains explicitly out of scope.

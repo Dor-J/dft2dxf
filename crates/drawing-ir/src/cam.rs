@@ -1,11 +1,11 @@
 //! CAM program metadata (cncKad punch/cut operations).
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::geometry::Point;
 
 /// One tool definition from a cncKad tool table.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CamTool {
   /// Tool kind letter (`R`, `C`, etc.).
   pub kind: String,
@@ -20,7 +20,7 @@ pub struct CamTool {
 }
 
 /// One CAM operation (cut, punch, arc cut, etc.).
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CamOperation {
   /// Linear cut path (`ONLINE`).
@@ -47,7 +47,7 @@ pub enum CamOperation {
 }
 
 /// Structured CAM program extracted from cncKad sections.
-#[derive(Debug, Clone, PartialEq, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct CamProgram {
   /// Tool table entries.
   pub tools: Vec<CamTool>,

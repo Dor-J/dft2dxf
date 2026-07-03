@@ -134,7 +134,22 @@ Do not submit proprietary customer drawings without explicit written permission.
 - **cncKad:** place private files in `tests/fixtures/valid/local/` (gitignored)
 - **Solid Edge:** see [tests/fixtures/valid/INTAKE.md](tests/fixtures/valid/INTAKE.md) for redistributable fixture requirements
 
-Also see [docs/test-fixtures.md](docs/test-fixtures.md) and [docs/ROADMAP.md](docs/ROADMAP.md).
+Also see [docs/test-fixtures.md](docs/test-fixtures.md), [docs/ROADMAP.md](docs/ROADMAP.md),
+and [docs/backend-integration.md](docs/backend-integration.md) for FastAPI / backend deployment.
+
+## Backend integration (FastAPI)
+
+For Python backends, use the **CLI subprocess** pattern today — build the release binary and
+call `dft2dxf convert` from an async worker. A planned **Axum HTTP sidecar** (M9) will support
+high-concurrency in-process conversion without per-request subprocess spawn.
+
+| Pattern | Status |
+| --- | --- |
+| CLI subprocess from FastAPI | **Ready** — see [docs/backend-integration.md](docs/backend-integration.md) |
+| HTTP sidecar (Axum worker pool) | **Ready** — `cargo build -p dft2dxf-sidecar` |
+
+**cncKad** files are production-ready via subprocess; **Solid Edge** files are suitable for
+preview/SVG only (EMF fidelity ceiling). See [docs/limitations.md](docs/limitations.md).
 
 ## Test coverage
 

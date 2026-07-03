@@ -1,6 +1,6 @@
 # DXF Mapping
 
-## Current experimental mappings
+## Entity mappings
 
 | Drawing IR | DXF entity | Status |
 | --- | --- | --- |
@@ -9,20 +9,29 @@
 | `Rectangle` | closed `LWPOLYLINE` | supported |
 | `Path` | `LWPOLYLINE` | supported |
 | `Text` | `TEXT` | supported |
-| `Arc` | — | **unsupported** (omitted; diagnostic `dxf.unsupported_entity`) |
+| `Arc` | `ARC` | supported |
+| `Circle` | `CIRCLE` | supported |
+| `Dimension` | `LINE` / `TEXT` fallback | partial |
+| CAM operations | `PUNCH` / `CUT` / `TOOLS` layers | supported (cncKad) |
 
 ## Unsupported / intentionally omitted
 
 | Drawing IR | Behavior |
 | --- | --- |
-| `Arc` | Not exported. A prior `CIRCLE` substitution was removed because mapping a partial arc to a full circle changes geometry. Proper DXF `ARC` output is planned for a later milestone. |
+| EMF fills / hatches | Diagnostic `emf.fill_unsupported`; not exported |
+| EMF clipping | Diagnostic `emf.clipping_unsupported` |
+| EMF raster | Diagnostic `emf.raster_unsupported` |
 
 ## Known fidelity loss
 
 - EMF font metrics do not map cleanly to DXF text height/width
 - Fills, hatches, gradients, and transparency are not preserved
-- Clipping and complex transforms may be lost
-- Arc entities are omitted from DXF until `ARC` export exists
+- Solid Edge EMF has no layer semantics in IR
+- DXF ACI color mapping is heuristic for non-primary RGB values
 
-DXF output should be treated as a visual/interoperability export, not an editable
-Solid Edge replacement.
+DXF output is a visual/interoperability export, not editable source CAD.
+
+## Golden tests
+
+Regression fixtures live under `tests/golden/dxf/`. Tests normalize volatile header
+fields (`$HANDSEED`, GUIDs) before comparison.

@@ -1,0 +1,31 @@
+[package]
+name = "dft2dxf-core"
+description = "In-memory DFT conversion core for CLI and HTTP sidecar"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+
+[dependencies]
+ckad-reader = { workspace = true }
+dft-reader = { workspace = true }
+drawing-dxf = { workspace = true }
+drawing-ir = { workspace = true }
+drawing-svg = { workspace = true }
+emf-reader = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tempfile = { workspace = true }
+
+[dev-dependencies]
+dft2dxf-testkit = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

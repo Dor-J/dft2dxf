@@ -18,6 +18,7 @@ use anyhow::{Context, Result};
 use ckad_reader::{detect_format, read_to_drawing, DftContainerFormat};
 use clap::{Parser, Subcommand, ValueEnum};
 use dft_reader::{DftDocument, DftOpenOptions, Limits};
+use dft2dxf_core::{convert_bytes, ConvertOptions};
 use drawing_ir::PaperUnit;
 use tracing_subscriber::EnvFilter;
 
@@ -342,43 +343,36 @@ fn cmd_convert_solid_edge(
   cam_json: bool,
   units: Option<&str>,
 ) -> Result<()> {
-  let mut document =
-    DftDocument::open_with_options(input, &DftOpenOptions::new().with_limits(limits))?;
-  let sheets = document.sheets().context("failed to read sheets")?;
-  let index = sheet.unwrap_or_else(|| sheets.first().map_or(1, |s| s.index));
-  let sheet_meta = document.sheet(index).context("sheet lookup failed")?;
-  let emf = document
-    .extract_emf(index)
-    .with_context(|| format!("failed to extract sheet {index}"))?;
-
-  let emf_doc = emf_reader::EmfDocument::parse(
-    &emf.data,
-    emf_reader::DEFAULT_MAX_RECORD_COUNT,
-    emf_reader::DEFAULT_MAX_RECORD_SIZE,
+  let bytes = std::fs::read(input)
+    .with_context(|| format!("failed to read {}", input.display()))?;
+  let index = sheet.unwrap_or(1);
+  let result = convert_bytes(
+    &bytes,
+    &ConvertOptions {
+      limits,
+      sheet: Some(index),
+      units: units.map(str::to_string),
+      include_svg: svg_preview.is_some(),
+      include_cam_json: cam_json,
+    },
   )
-  .context("EMF parse failed")?;
+  .map_err(|err| anyhow::anyhow!(err.to_string()))?;
 
-  let mut drawing = emf_reader::replay_to_drawing(
-    &emf_doc,
-    Some(sheet_meta.index),
-    Some(sheet_meta.name.clone()),
-    Some(sheet_meta.info.width),
-    Some(sheet_meta.info.height),
-  );
-
-  apply_units_override(&mut drawing, units);
-
-  drawing_dxf::write_drawing_to_file(&mut drawing, output)
+  std::fs::write(output, &result.dxf)
     .with_context(|| format!("failed to write DXF to {}", output.display()))?;
 
-  if cam_json {
-    write_cam_json_sidecar(&drawing, output)?;
+  if let Some(cam) = result.cam_json {
+    let sidecar = output.with_extension("cam.json");
+    std::fs::write(&sidecar, serde_json::to_string_pretty(&cam)?)?;
   }
 
   if let Some(dir) = svg_preview {
+    std::fs::create_dir_all(&dir)?;
     let svg_path = dir.join(format!("sheet-{index}.svg"));
-    drawing_svg::write_drawing_to_file(&drawing, &svg_path)
-      .with_context(|| format!("failed to write SVG to {}", svg_path.display()))?;
+    if let Some(svg) = result.svg {
+      std::fs::write(&svg_path, svg)
+        .with_context(|| format!("failed to write SVG to {}", svg_path.display()))?;
+    }
   }
 
   tracing::info!(output = %output.display(), sheet = index, "conversion complete");
@@ -393,23 +387,35 @@ fn cmd_convert_cnckad(
   cam_json: bool,
   units: Option<&str>,
 ) -> Result<()> {
-  let mut drawing = read_to_drawing(input, limits.max_file_size)
-    .with_context(|| format!("failed to read cncKad file {}", input.display()))?;
+  let bytes = std::fs::read(input)
+    .with_context(|| format!("failed to read {}", input.display()))?;
+  let result = convert_bytes(
+    &bytes,
+    &ConvertOptions {
+      limits,
+      sheet: None,
+      units: units.map(str::to_string),
+      include_svg: svg_preview.is_some(),
+      include_cam_json: cam_json,
+    },
+  )
+  .map_err(|err| anyhow::anyhow!(err.to_string()))?;
 
-  apply_units_override(&mut drawing, units);
-
-  drawing_dxf::write_drawing_to_file(&mut drawing, output)
+  std::fs::write(output, &result.dxf)
     .with_context(|| format!("failed to write DXF to {}", output.display()))?;
 
-  if cam_json {
-    write_cam_json_sidecar(&drawing, output)?;
+  if let Some(cam) = result.cam_json {
+    let sidecar = output.with_extension("cam.json");
+    std::fs::write(&sidecar, serde_json::to_string_pretty(&cam)?)?;
   }
 
   if let Some(dir) = svg_preview {
     std::fs::create_dir_all(&dir)?;
     let svg_path = dir.join("sheet-1.svg");
-    drawing_svg::write_drawing_to_file(&drawing, &svg_path)
-      .with_context(|| format!("failed to write SVG to {}", svg_path.display()))?;
+    if let Some(svg) = result.svg {
+      std::fs::write(&svg_path, svg)
+        .with_context(|| format!("failed to write SVG to {}", svg_path.display()))?;
+    }
   }
 
   tracing::info!(output = %output.display(), format = "cnckad", "conversion complete");

@@ -1,9 +1,9 @@
 //! Drawing-level metadata from source documents.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Linear drawing units.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PaperUnit {
   /// Unitless coordinates.
@@ -21,7 +21,7 @@ impl Default for PaperUnit {
 }
 
 /// Document-level metadata attached to a [`Drawing`](crate::Drawing).
-#[derive(Debug, Clone, PartialEq, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DrawingMetadata {
   /// Part or drawing name.
   #[serde(skip_serializing_if = "Option::is_none")]

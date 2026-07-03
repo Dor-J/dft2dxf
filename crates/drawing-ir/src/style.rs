@@ -1,9 +1,9 @@
 //! Stroke and fill styles.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// RGBA color.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Color {
   /// Red channel 0-255.
   pub r: u8,
@@ -30,7 +30,7 @@ impl Color {
 }
 
 /// Stroke style for vector primitives.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StrokeStyle {
   /// Stroke color.
   pub color: Color,
@@ -48,14 +48,14 @@ impl Default for StrokeStyle {
 }
 
 /// Fill style for closed geometry.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FillStyle {
   /// Fill color.
   pub color: Color,
 }
 
 /// Combined style for an entity.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Style {
   /// Optional stroke.
   #[serde(skip_serializing_if = "Option::is_none")]

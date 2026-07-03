@@ -1,6 +1,6 @@
 //! Drawing and sheet containers.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::cam::CamProgram;
 use crate::diagnostic::Diagnostic;
@@ -9,7 +9,7 @@ use crate::geometry::{BoundingBox, Point};
 use crate::metadata::DrawingMetadata;
 
 /// One sheet/page in a drawing.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Sheet {
   /// One-based sheet index when known.
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -98,7 +98,7 @@ fn include_entity_in_bounds(entity: &Entity, bounds: &mut BoundingBox) {
 }
 
 /// A complete drawing with one or more sheets.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Drawing {
   /// Source file path when known.
   #[serde(skip_serializing_if = "Option::is_none")]

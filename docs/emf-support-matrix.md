@@ -9,7 +9,9 @@
 | `EMR_POLYGON` / `EMR_POLYGON16` | supported | closed polyline |
 | `EMR_MOVETOEX` / `EMR_LINETO` | partial | line/path replay |
 | `EMR_EXTTEXTOUTA` / `EMR_EXTTEXTOUTW` | partial | basic text extraction |
-| pens/brushes/fonts | planned | object table replay |
+| `EMR_CREATEPEN` / `EMR_EXTCREATEPEN` / `EMR_SELECTOBJECT` | partial | pen table + stroke replay |
+| `EMR_SETMAPMODE` / world transforms | partial | scale factors applied to coordinates |
+| brushes / fills | planned | not replayed |
 | clipping | planned | diagnostic fallback |
 | raster/bitmaps | unsupported | diagnostic only |
 | OpenGL / printer escapes | unsupported | diagnostic only |

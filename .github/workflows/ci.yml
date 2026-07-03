@@ -56,3 +56,17 @@ jobs:
         run: cargo install cargo-deny --locked
       - name: Deny check
         run: cargo deny check
+
+  fuzz-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+      - name: Fuzz smoke (30s per target)
+        run: |
+          cargo fuzz run fuzz_emf_records -- -max_total_time=30 -runs=0
+          cargo fuzz run fuzz_dft_metadata -- -max_total_time=30 -runs=0
+          cargo fuzz run fuzz_zlib_decompress -- -max_total_time=30 -runs=0
+        working-directory: fuzz

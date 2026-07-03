@@ -1,0 +1,41 @@
+[package]
+name = "dft2dxf-sidecar"
+description = "HTTP sidecar for DFT conversion with bounded worker pool"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "dft2dxf-sidecar"
+path = "src/main.rs"
+
+[lib]
+name = "dft2dxf_sidecar"
+path = "src/lib.rs"
+
+[dependencies]
+axum = { workspace = true }
+base64 = { workspace = true }
+dft2dxf-core = { workspace = true }
+dft-reader = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+dft2dxf-testkit = { workspace = true }
+http-body-util = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

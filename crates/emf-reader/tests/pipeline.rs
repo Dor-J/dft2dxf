@@ -25,6 +25,9 @@ fn replays_rectangle_to_drawing_ir() {
   );
   assert_eq!(drawing.sheets.len(), 1);
   assert!(!drawing.sheets[0].entities.is_empty());
+  let entity = &drawing.sheets[0].entities[0];
+  assert!(entity.provenance.is_some());
+  assert_eq!(entity.provenance.as_ref().unwrap().emf_record_type, Some(42));
 }
 
 #[test]

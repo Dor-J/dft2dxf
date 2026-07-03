@@ -1,6 +1,6 @@
 //! Drawing entities.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::diagnostic::SourceProvenance;
 use crate::geometry::{ArcSegment, Path, Point, Polyline};
@@ -12,7 +12,7 @@ fn is_zero(value: &f64) -> bool {
 }
 
 /// Linear or radial dimension annotation.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum DimensionKind {
   /// Linear distance between two points.
@@ -40,7 +40,7 @@ pub enum DimensionKind {
 }
 
 /// Text alignment placeholder for EMF text output.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TextRun {
   /// Anchor position.
   pub position: Point,
@@ -52,7 +52,7 @@ pub struct TextRun {
   /// Font height in drawing units.
   pub font_size: f64,
   /// Rotation in degrees (counter-clockwise).
-  #[serde(skip_serializing_if = "is_zero")]
+  #[serde(default, skip_serializing_if = "is_zero")]
   pub rotation_deg: f64,
   /// Visual style.
   pub style: Style,
@@ -62,7 +62,7 @@ pub struct TextRun {
 }
 
 /// Supported entity kinds in the drawing IR.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum EntityKind {
   /// Line between two points.
@@ -99,7 +99,7 @@ pub enum EntityKind {
 }
 
 /// One drawable entity on a sheet.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Entity {
   /// Layer name when known.
   #[serde(skip_serializing_if = "Option::is_none")]

@@ -1,6 +1,7 @@
 //! Strict EMF record iterator.
 
 use crate::error::{EmfError, EmfResult};
+use crate::header::EmfHeader;
 use crate::record::{EMR_EOF, EMR_HEADER};
 
 /// Maximum records to parse from one EMF by default.
@@ -55,6 +56,8 @@ impl EmfRecord {
 /// Parsed EMF with record list.
 #[derive(Debug, Clone)]
 pub struct EmfDocument {
+  /// Parsed `EMR_HEADER` fields.
+  pub header: EmfHeader,
   /// Parsed records excluding padding.
   pub records: Vec<EmfRecord>,
 }
@@ -144,7 +147,23 @@ impl EmfDocument {
       return Err(EmfError::MissingEof);
     }
 
-    Ok(Self { records })
+    let first = records.first().ok_or_else(|| {
+      EmfError::invalid("header", "EMF contains no records")
+    })?;
+    if first.record_type != EMR_HEADER {
+      return Err(EmfError::invalid(
+        "header",
+        format!(
+          "first record must be EMR_HEADER, got type {}",
+          first.record_type
+        ),
+      ));
+    }
+
+    let header = EmfHeader::parse(&first.data)?;
+    header.validate_n_bytes(data.len())?;
+
+    Ok(Self { header, records })
   }
 }
 

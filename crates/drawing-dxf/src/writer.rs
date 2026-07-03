@@ -52,6 +52,31 @@ pub fn write_drawing_to_file_with_options(
   path: &Path,
   options: DxfWriteOptions,
 ) -> DxfResult<()> {
+  let dxf = build_dxf_document(drawing, options)?;
+  dxf
+    .save_file(path)
+    .map_err(|err| DxfError::Write(err.to_string()))?;
+  Ok(())
+}
+
+/// Writes a drawing IR document to an in-memory DXF byte buffer.
+///
+/// # Errors
+///
+/// Returns [`DxfError`] if the DXF buffer cannot be written.
+pub fn write_drawing_to_bytes(
+  drawing: &mut Drawing,
+  options: DxfWriteOptions,
+) -> DxfResult<Vec<u8>> {
+  let dxf = build_dxf_document(drawing, options)?;
+  let mut buffer = Vec::new();
+  dxf
+    .save(&mut buffer)
+    .map_err(|err| DxfError::Write(err.to_string()))?;
+  Ok(buffer)
+}
+
+fn build_dxf_document(drawing: &mut Drawing, options: DxfWriteOptions) -> DxfResult<DxfDrawing> {
   let mut dxf = DxfDrawing::new();
   configure_header(&mut dxf, drawing);
 
@@ -81,10 +106,7 @@ pub fn write_drawing_to_file_with_options(
 
   dxf.normalize();
 
-  dxf
-    .save_file(path)
-    .map_err(|err| DxfError::Write(err.to_string()))?;
-  Ok(())
+  Ok(dxf)
 }
 
 fn configure_header(dxf: &mut DxfDrawing, drawing: &Drawing) {

@@ -4,12 +4,39 @@ use std::path::PathBuf;
 
 mod fixtures;
 
+use dft2dxf_testkit::{
+  build_pen_and_line_emf, build_polygon_emf, build_polyline_emf, build_rectangle_emf,
+  build_text_emf,
+};
 use drawing_ir::{EntityKind, PathSegment, Point};
 use drawing_svg::write_drawing_to_string;
+use emf_reader::{
+  replay_to_drawing, EmfDocument, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE,
+};
 use fixtures::multi_entity_drawing;
 
 fn golden_svg_dir() -> PathBuf {
   PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/svg")
+}
+
+fn replay_emf_to_svg(emf: &[u8], width: Option<f64>, height: Option<f64>) -> String {
+  let doc = EmfDocument::parse(emf, DEFAULT_MAX_RECORD_COUNT, DEFAULT_MAX_RECORD_SIZE).unwrap();
+  let drawing = replay_to_drawing(&doc, Some(1), Some("Sheet1".to_string()), width, height);
+  write_drawing_to_string(&drawing).unwrap()
+}
+
+fn assert_golden_snapshot(name: &str, svg: &str) {
+  insta::with_settings!({snapshot_path => golden_svg_dir()}, {
+    insta::assert_snapshot!(name, svg);
+  });
+}
+
+fn assert_golden_file(name: &str, svg: &str) {
+  let path = golden_svg_dir().join(format!("{name}.svg"));
+  if path.exists() {
+    let golden = std::fs::read_to_string(&path).expect("read golden svg");
+    assert_eq!(svg.trim_end(), golden.trim_end());
+  }
 }
 
 fn line_drawing() -> drawing_ir::Drawing {
@@ -145,4 +172,55 @@ fn svg_renders_multi_entity_drawing() {
   assert!(svg.contains("data-layer=\"L1\""));
   assert!(svg.contains("text") || svg.contains("Label"));
   assert!(svg.contains("path") || svg.contains("circle"));
+}
+
+#[test]
+fn pipeline_rectangle_emf_matches_golden() {
+  let svg = replay_emf_to_svg(&build_rectangle_emf(0, 0, 100, 50), Some(100.0), Some(50.0));
+  assert!(svg.contains("viewBox"));
+  assert_golden_snapshot("rectangle", &svg);
+  assert_golden_file("rectangle", &svg);
+}
+
+#[test]
+fn pipeline_polyline_emf_matches_golden() {
+  let svg = replay_emf_to_svg(
+    &build_polyline_emf(&[(0, 0), (50, 0), (50, 30)]),
+    Some(60.0),
+    Some(40.0),
+  );
+  assert_golden_snapshot("polyline", &svg);
+  assert_golden_file("polyline", &svg);
+}
+
+#[test]
+fn pipeline_polygon_emf_matches_golden() {
+  let svg = replay_emf_to_svg(
+    &build_polygon_emf(&[(0, 0), (40, 0), (20, 30)]),
+    Some(50.0),
+    Some(40.0),
+  );
+  assert_golden_snapshot("polygon", &svg);
+  assert_golden_file("polygon", &svg);
+}
+
+#[test]
+fn pipeline_moveto_lineto_emf_matches_golden() {
+  let svg = replay_emf_to_svg(&build_pen_and_line_emf(), Some(110.0), Some(60.0));
+  assert_golden_snapshot("moveto_lineto", &svg);
+  assert_golden_file("moveto_lineto", &svg);
+}
+
+#[test]
+fn pipeline_text_emf_matches_golden() {
+  let svg = replay_emf_to_svg(&build_text_emf(10, 20, "Hello"), Some(120.0), Some(80.0));
+  assert!(svg.contains("Hello") || svg.contains("text"));
+  assert_golden_snapshot("text", &svg);
+  assert_golden_file("text", &svg);
+}
+
+#[test]
+fn svg_viewbox_uses_sheet_dimensions_when_present() {
+  let svg = replay_emf_to_svg(&build_rectangle_emf(0, 0, 10, 10), Some(200.0), Some(100.0));
+  assert!(svg.contains("viewBox"));
 }

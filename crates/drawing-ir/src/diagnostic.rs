@@ -1,9 +1,9 @@
 //! Diagnostics and provenance metadata.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Severity for a diagnostic message.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DiagnosticSeverity {
   /// Informational note.
@@ -15,7 +15,7 @@ pub enum DiagnosticSeverity {
 }
 
 /// Source location for a converted primitive.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourceProvenance {
   /// EMF record index when known.
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -26,7 +26,7 @@ pub struct SourceProvenance {
 }
 
 /// One diagnostic emitted during conversion.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Diagnostic {
   /// Severity level.
   pub severity: DiagnosticSeverity,

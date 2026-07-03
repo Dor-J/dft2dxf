@@ -22,6 +22,7 @@ clap = { workspace = true }
 ckad-reader = { workspace = true }
 dft-reader = { workspace = true }
 dft2dxf-testkit = { workspace = true }
+dft2dxf-core = { workspace = true }
 drawing-dxf = { workspace = true }
 drawing-ir = { workspace = true }
 drawing-svg = { workspace = true }
@@ -37,6 +38,7 @@ ckad-reader = { workspace = true }
 dft2dxf-testkit = { workspace = true }
 predicates = { workspace = true }
 tempfile = { workspace = true }
+dft2dxf-core = { workspace = true }
 
 [lints]
 workspace = true

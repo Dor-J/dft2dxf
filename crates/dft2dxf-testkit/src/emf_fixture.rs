@@ -59,20 +59,22 @@ pub fn build_arc_emf(
 #[must_use]
 pub fn build_pen_and_line_emf() -> Vec<u8> {
   let mut pen_payload = vec![0u8; 28];
-  pen_payload[4..8].copy_from_slice(&1u32.to_le_bytes());
-  pen_payload[12..16].copy_from_slice(&0x0000_00FF_u32.to_le_bytes());
-  pen_payload[16..20].copy_from_slice(&2i32.to_le_bytes());
+  pen_payload[0..4].copy_from_slice(&1u32.to_le_bytes());
+  pen_payload[4..8].copy_from_slice(&0u32.to_le_bytes()); // lopnStyle
+  pen_payload[8..12].copy_from_slice(&2i32.to_le_bytes()); // lopnWidth.x
+  pen_payload[12..16].copy_from_slice(&0i32.to_le_bytes()); // lopnWidth.y
+  pen_payload[16..20].copy_from_slice(&0x0000_00FF_u32.to_le_bytes()); // lopnColor
 
-  let mut select_payload = vec![0u8; 12];
-  select_payload[8..12].copy_from_slice(&1u32.to_le_bytes());
+  let mut select_payload = vec![0u8; 4];
+  select_payload[0..4].copy_from_slice(&1u32.to_le_bytes());
 
-  let mut move_payload = vec![0u8; 16];
-  move_payload[8..12].copy_from_slice(&0i32.to_le_bytes());
-  move_payload[12..16].copy_from_slice(&0i32.to_le_bytes());
+  let mut move_payload = vec![0u8; 8];
+  move_payload[0..4].copy_from_slice(&0i32.to_le_bytes());
+  move_payload[4..8].copy_from_slice(&0i32.to_le_bytes());
 
-  let mut line_payload = vec![0u8; 16];
-  line_payload[8..12].copy_from_slice(&100i32.to_le_bytes());
-  line_payload[12..16].copy_from_slice(&50i32.to_le_bytes());
+  let mut line_payload = vec![0u8; 8];
+  line_payload[0..4].copy_from_slice(&100i32.to_le_bytes());
+  line_payload[4..8].copy_from_slice(&50i32.to_le_bytes());
 
   build_emf(&[
     (EMR_CREATEPEN, pen_payload),
@@ -86,12 +88,17 @@ pub fn build_pen_and_line_emf() -> Vec<u8> {
 #[must_use]
 pub fn build_text_emf(x: i32, y: i32, text: &str) -> Vec<u8> {
   let text_bytes = text.as_bytes();
-  let payload_len = 24 + text_bytes.len() + 1;
+  let string_offset = 56u32;
+  let payload_len = usize::try_from(string_offset).unwrap_or(56) + text_bytes.len() + 1;
   let padded_len = payload_len.next_multiple_of(4);
   let mut payload = vec![0u8; padded_len];
-  payload[8..12].copy_from_slice(&x.to_le_bytes());
-  payload[12..16].copy_from_slice(&y.to_le_bytes());
-  payload[24..24 + text_bytes.len()].copy_from_slice(text_bytes);
+  // `ptlReference` at record offset 36 (payload offset 28).
+  payload[28..32].copy_from_slice(&x.to_le_bytes());
+  payload[32..36].copy_from_slice(&y.to_le_bytes());
+  payload[36..40].copy_from_slice(&u32::try_from(text_bytes.len()).unwrap_or(0).to_le_bytes());
+  payload[40..44].copy_from_slice(&string_offset.to_le_bytes());
+  let string_start = usize::try_from(string_offset).unwrap_or(56) - 8;
+  payload[string_start..string_start + text_bytes.len()].copy_from_slice(text_bytes);
   build_emf(&[(EMR_EXTTEXTOUTA, payload)])
 }
 
@@ -180,6 +187,12 @@ fn arc_record(
   (EMR_ARC, payload)
 }
 
+/// Builds a minimal EMF from arbitrary record payloads (for tests).
+#[must_use]
+pub fn build_emf_records(records: &[(u32, Vec<u8>)]) -> Vec<u8> {
+  build_emf(records)
+}
+
 fn build_emf(records: &[(u32, Vec<u8>)]) -> Vec<u8> {
   let header_size = 88u32;
   let eof_size = 20u32;
@@ -197,6 +210,13 @@ fn build_emf(records: &[(u32, Vec<u8>)]) -> Vec<u8> {
   data.extend_from_slice(&vec![0u8; remaining]);
   if data.len() >= 52 {
     data[48..52].copy_from_slice(&file_size.to_le_bytes());
+    let n_records = 1 + u32::try_from(records.len()).unwrap_or(0) + 1;
+    data[52..56].copy_from_slice(&n_records.to_le_bytes());
+    // rclBounds: default drawing extent for tests
+    data[8..12].copy_from_slice(&0i32.to_le_bytes());
+    data[12..16].copy_from_slice(&0i32.to_le_bytes());
+    data[16..20].copy_from_slice(&1000i32.to_le_bytes());
+    data[20..24].copy_from_slice(&1000i32.to_le_bytes());
   }
 
   for (record_type, payload) in records {
@@ -217,6 +237,24 @@ fn append_record_header(buf: &mut Vec<u8>, record_type: u32, size: u32) {
 
 fn usize_to_u32(value: usize, context: &str) -> u32 {
   u32::try_from(value).unwrap_or_else(|_| panic!("{context} does not fit in u32"))
+}
+
+/// Builds an EMF with a corrupt `nBytes` field (for parser tests).
+#[must_use]
+pub fn build_emf_wrong_n_bytes() -> Vec<u8> {
+  let mut emf = build_rectangle_emf(0, 0, 10, 10);
+  if emf.len() >= 52 {
+    emf[48..52].copy_from_slice(&1u32.to_le_bytes());
+  }
+  emf
+}
+
+/// Builds an EMF with invalid `rclBounds` (right < left).
+#[must_use]
+pub fn build_emf_invalid_bounds() -> Vec<u8> {
+  let mut emf = build_rectangle_emf(0, 0, 10, 10);
+  emf[16..20].copy_from_slice(&(-1i32).to_le_bytes());
+  emf
 }
 
 /// Validates that bytes contain a valid EMF signature in the header record.
